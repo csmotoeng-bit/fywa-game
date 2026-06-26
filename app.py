@@ -742,7 +742,12 @@ def reroll_letters():
 
     current["manual_rerolls_left"] -= 1
     current["letters"] = make_letters()
-    socketio.emit("toast", {"message": "Letters rerolled!", "type": "info"}, room=room_code)
+    current["frozen"] = []
+    current["current_buzzer"] = None
+    current["answer_deadline_active"] = False
+    current["buzz_started_at"] = None
+
+    socketio.emit("toast", {"message": "Letters rerolled! Everyone is back in.", "type": "info"}, room=room_code)
     emit_game_state(room_code)
 
 
@@ -754,8 +759,14 @@ def auto_reroll_letters():
     if not room or room["state"] != "playing":
         return
 
-    room["current"]["letters"] = make_letters()
-    socketio.emit("toast", {"message": "Letters rerolled!", "type": "info"}, room=room_code)
+    current = room["current"]
+    current["letters"] = make_letters()
+    current["frozen"] = []
+    current["current_buzzer"] = None
+    current["answer_deadline_active"] = False
+    current["buzz_started_at"] = None
+
+    socketio.emit("toast", {"message": "Letters rerolled! Everyone is back in.", "type": "info"}, room=room_code)
     emit_game_state(room_code)
 
 
