@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lobby - F*ck You On About?</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<div class="page">
+    <div class="topbar">
+        <div>
+            <div class="brand-pill">Lobby</div>
+            <h1>F*ck You On About?</h1>
+        </div>
+
+        <div class="room-code-box">
+            <div class="room-code" id="room-code">{{ room_code }}</div>
+            <button onclick="copyRoomCode()">Copy Code</button>
+        </div>
+    </div>
+
+    <div id="toast-area"></div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Players</h2>
+            <div id="players"></div>
+        </div>
+
+        <div class="card" id="host-settings">
+            <h2>Host Settings</h2>
+
+            <label>Round Limit</label>
+            <input id="round_limit" type="number" value="20">
+
+            <label>Target Score</label>
+            <input id="target_score" type="number" value="10">
+
+            <label>Round Timer</label>
+            <input id="round_timer" type="number" value="60">
+
+            <label>Letter Reroll Seconds</label>
+            <input id="letter_reroll_seconds" type="number" value="15">
+
+            <h3>Card Packs</h3>
+            <div id="packs" class="categories"></div>
+
+            <h3>Sound Settings</h3>
+            <label class="check">
+                <input type="checkbox" id="sound_enabled" checked>
+                Sound enabled
+            </label>
+
+            <label>Volume</label>
+            <input id="volume" type="range" min="0" max="1" step="0.05" value="0.6">
+
+            <h3>Upload CSV Pack</h3>
+            <p class="hint">CSV must use headers: Category,Topic</p>
+            <input id="pack_name" placeholder="Pack name">
+            <input id="pack_file" type="file" accept=".csv">
+            <button onclick="uploadPack()">Upload Pack</button>
+
+            <hr>
+
+            <button onclick="saveSettings()">Save Settings</button>
+            <button onclick="startGame()">Start Game</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const socket = io();
+let state = null;
+
+socket.on("game_state", data => {
+    state = data;
+    renderLobby();
+});
+
+socket.on("go_to_game", data => {
+    window.location.href = "/game/" + data.room_code;
+});
+
+socket.on("toast", data => {
+    showToast(data.message);
+});
+
+function renderLobby() {
+    renderPlayers();
+    renderPacks();
+
+    const isHost = state.you === state.host_id;
+    document.getElementById("host-settings").style.display = isHost ? "block" : "none";
+}
+
+function renderPlayers() {
+    const playersDiv = document.getElementById("players");
+    playersDiv.innerHTML = "";
+
+    state.players.forEach(p => {
+        const row = document.createElement("div");
+        row.className = "player-row";
+        row.innerHTML = `
+            <div class="player-left">
+                <span class="avatar" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
+                <strong>${p.nickname}</strong>
+                ${p.spectator ? "<em>Spectator</em>" : ""}
+                ${!p.connected ? "<em>Disconnected</em>" : ""}
+            </div>
+            ${p.id === state.host_id ? "<span class='host-badge'>HOST</span>" : ""}
+        `;
+        playersDiv.appendChild(row);
+    });
+}
+
+function renderPacks() {
+    const packsDiv = document.getElementById("packs");
+    packsDiv.innerHTML = "";
+
+    state.packs.forEach(pack => {
+        const enabled = state.settings.packs.includes(pack.id);
+
+        const label = document.createElement("label");
+        label.className = "check";
+        label.innerHTML = `
+            <input type="checkbox" class="pack" value="${pack.id}" ${enabled ? "checked" : ""}>
+            ${pack.name} <small>(${pack.count})</small>
+        `;
+        packsDiv.appendChild(label);
+    });
+}
+
+function saveSettings() {
+    const packs = Array.from(document.querySelectorAll(".pack:checked")).map(c => c.value);
+
+    socket.emit("update_settings", {
+        round_limit: document.getElementById("round_limit").value,
+        target_score: document.getElementById("target_score").value,
+        round_timer: document.getElementById("round_timer").value,
+        letter_reroll_seconds: document.getElementById("letter_reroll_seconds").value,
+        packs: packs,
+        sound_enabled: document.getElementById("sound_enabled").checked,
+        volume: document.getElementById("volume").value
+    });
+
+    showToast("Settings saved");
+}
+
+function startGame() {
+    saveSettings();
+    socket.emit("start_game");
+}
+
+function copyRoomCode() {
+    const code = document.getElementById("room-code").innerText;
+    navigator.clipboard.writeText(code);
+    showToast("Room code copied");
+}
+
+function showToast(message) {
+    const area = document.getElementById("toast-area");
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.innerText = message;
+    area.appendChild(toast);
+
+    setTimeout(() => toast.remove(), 2500);
+}
+
+async function uploadPack() {
+    const name = document.getElementById("pack_name").value;
+    const file = document.getElementById("pack_file").files[0];
+
+    if (!file) {
+        showToast("Choose a CSV file first");
+        return;
+    }
+
+    const form = new FormData();
+    form.append("pack_name", name || file.name.replace(".csv", ""));
+    form.append("pack_file", file);
+
+    const res = await fetch("/upload-pack", {
+        method: "POST",
+        body: form
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.ok) {
+        showToast("Pack uploaded");
+    } else {
+        showToast(data.error || "Upload failed");
+    }
+}
+</script>
+</body>
+</html>

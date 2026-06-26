@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>F*ck You On About?</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<div class="page center">
+    <div class="card home-card">
+        <div class="brand-pill">FYWA</div>
+        <h1>F*ck You On About?</h1>
+        <p class="subtitle">A chaotic speaker-vs-guessers party game.</p>
+
+        <div class="how-to-play">
+            <h2>How to Play</h2>
+            <ol>
+                <li>Join a room with a nickname and room code.</li>
+                <li>One player becomes the speaker each round.</li>
+                <li>The speaker sees the secret topic and 7 allowed letters.</li>
+                <li>Guessers see the letters but not the topic.</li>
+                <li>Speaker describes the topic in Discord or voice chat.</li>
+                <li>Guessers buzz in when they know the answer.</li>
+                <li>Wrong answer = frozen out for the round.</li>
+                <li>Correct answer = guesser and speaker both score.</li>
+                <li>If the speaker messes up, everyone else scores.</li>
+            </ol>
+        </div>
+
+        <form method="POST" action="/create">
+            <h2>Create Room</h2>
+            <input name="nickname" placeholder="Your nickname" required>
+            <button>Create Game</button>
+        </form>
+
+        <hr>
+
+        <form method="POST" action="/join">
+            <h2>Join Room</h2>
+            <input name="nickname" placeholder="Your nickname" required>
+            <input name="room_code" placeholder="Room code" maxlength="5" required>
+
+            <label class="spectator-check">
+                <input type="checkbox" name="spectator">
+                Join as spectator
+            </label>
+
+            <button>Join Game</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
