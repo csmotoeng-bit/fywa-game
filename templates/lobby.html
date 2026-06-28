@@ -23,9 +23,24 @@
     <div id="toast-area"></div>
 
     <div class="lobby-grid">
-        <div class="card">
-            <h2>Players</h2>
-            <div id="players"></div>
+        <div class="lobby-left">
+            <div class="card">
+                <h2>Players</h2>
+                <div id="players"></div>
+            </div>
+
+            <div class="card">
+                <h2>Your Custom Prompts</h2>
+                <p class="hint">Add up to 5 prompts. These can appear under the Custom Prompts category.</p>
+
+                <input class="custom-prompt" placeholder="Prompt 1">
+                <input class="custom-prompt" placeholder="Prompt 2">
+                <input class="custom-prompt" placeholder="Prompt 3">
+                <input class="custom-prompt" placeholder="Prompt 4">
+                <input class="custom-prompt" placeholder="Prompt 5">
+
+                <button onclick="submitCustomPrompts()">Save Prompts</button>
+            </div>
         </div>
 
         <div class="card" id="host-settings">
@@ -68,6 +83,16 @@
                 Speaker scores when guessed correctly
             </label>
 
+            <label class="check">
+                <input type="checkbox" id="sudden_death" checked>
+                Sudden death if tied
+            </label>
+
+            <label class="check">
+                <input type="checkbox" id="enable_custom_prompts" checked>
+                Allow player custom prompts
+            </label>
+
             <h3>Card Packs</h3>
             <div id="packs" class="categories"></div>
 
@@ -106,16 +131,36 @@ socket.on("go_to_game", data => {
     window.location.href = "/game/" + data.room_code;
 });
 
+socket.on("go_to_lobby", data => {
+    window.location.href = "/lobby/" + data.room_code;
+});
+
 socket.on("toast", data => {
     showToast(data.message);
 });
 
 function renderLobby() {
+    if (!state) return;
+
     renderPlayers();
     renderPacks();
 
     const isHost = state.you === state.host_id;
     document.getElementById("host-settings").style.display = isHost ? "block" : "none";
+
+    if (isHost && state.settings) {
+        document.getElementById("turn_limit").value = state.settings.turn_limit ?? 3;
+        document.getElementById("target_score").value = state.settings.target_score ?? 20;
+        document.getElementById("round_timer").value = state.settings.round_timer ?? 60;
+        document.getElementById("answer_timer").value = state.settings.answer_timer ?? 10;
+        document.getElementById("letter_reroll_seconds").value = state.settings.letter_reroll_seconds ?? 20;
+        document.getElementById("panic_uses").value = state.settings.panic_uses ?? 1;
+        document.getElementById("speaker_scores").checked = state.settings.speaker_scores !== false;
+        document.getElementById("sudden_death").checked = state.settings.sudden_death !== false;
+        document.getElementById("enable_custom_prompts").checked = state.settings.enable_custom_prompts !== false;
+        document.getElementById("sound_enabled").checked = state.settings.sound_enabled !== false;
+        document.getElementById("volume").value = state.settings.volume ?? 0.6;
+    }
 }
 
 function renderPlayers() {
@@ -127,10 +172,11 @@ function renderPlayers() {
         row.className = "player-row";
         row.innerHTML = `
             <div class="player-left">
-                <span class="avatar" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
+                <span class="avatar small" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
                 <strong>${p.nickname}</strong>
                 ${p.spectator ? "<em>Spectator</em>" : ""}
                 ${!p.connected ? "<em>Disconnected</em>" : ""}
+                ${p.custom_prompts_count ? `<em>${p.custom_prompts_count}/5 prompts</em>` : ""}
             </div>
             ${p.id === state.host_id ? "<span class='host-badge'>HOST</span>" : ""}
         `;
@@ -166,6 +212,8 @@ function saveSettings() {
         letter_reroll_seconds: document.getElementById("letter_reroll_seconds").value,
         panic_uses: document.getElementById("panic_uses").value,
         speaker_scores: document.getElementById("speaker_scores").checked,
+        sudden_death: document.getElementById("sudden_death").checked,
+        enable_custom_prompts: document.getElementById("enable_custom_prompts").checked,
         packs: packs,
         sound_enabled: document.getElementById("sound_enabled").checked,
         volume: document.getElementById("volume").value
@@ -177,6 +225,15 @@ function saveSettings() {
 function startGame() {
     saveSettings();
     socket.emit("start_game");
+}
+
+function submitCustomPrompts() {
+    const prompts = Array.from(document.querySelectorAll(".custom-prompt"))
+        .map(input => input.value.trim())
+        .filter(Boolean);
+
+    socket.emit("submit_custom_prompts", {prompts});
+    showToast("Custom prompts saved");
 }
 
 function copyRoomCode() {

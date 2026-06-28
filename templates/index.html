@@ -68,5 +68,38 @@
         </form>
     </div>
 </div>
+
+<script>
+const nicknameInputs = document.querySelectorAll("input[name='nickname']");
+const colourInputs = document.querySelectorAll("input[name='colour']");
+
+const savedName = localStorage.getItem("fywa_nickname");
+const savedColour = localStorage.getItem("fywa_colour");
+
+if (savedName) {
+    nicknameInputs.forEach(input => input.value = savedName);
+}
+
+if (savedColour) {
+    colourInputs.forEach(input => {
+        input.checked = input.value === savedColour;
+    });
+}
+
+document.querySelectorAll("form").forEach(form => {
+    form.addEventListener("submit", () => {
+        const nickname = form.querySelector("input[name='nickname']")?.value;
+        const colour = form.querySelector("input[name='colour']:checked")?.value;
+
+        if (nickname) {
+            localStorage.setItem("fywa_nickname", nickname);
+        }
+
+        if (colour) {
+            localStorage.setItem("fywa_colour", colour);
+        }
+    });
+});
+</script>
 </body>
 </html>

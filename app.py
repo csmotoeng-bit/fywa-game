@@ -6,6 +6,7 @@ import string
 import time
 import uuid
 from collections import Counter
+
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_socketio import SocketIO, join_room
 
@@ -193,6 +194,55 @@ def default_stats():
     }
 
 
+def custom_prompt_cards(room):
+    cards = []
+
+    for player in room["players"].values():
+        for prompt in player.get("custom_prompts", []):
+            cards.append({
+                "category": "Custom Prompts",
+                "topic": prompt
+            })
+
+    return cards
+
+
+def top_score_tied_players(room):
+    if not room["scores"]:
+        return []
+
+    top_score = max(room["scores"].values())
+    return [pid for pid, score in room["scores"].items() if score == top_score]
+
+
+def should_start_sudden_death(room):
+    return (
+        room["settings"].get("sudden_death", True)
+        and not room.get("sudden_death_active", False)
+        and len(top_score_tied_players(room)) > 1
+    )
+
+
+def transfer_host_if_needed(room_code):
+    room = rooms.get(room_code)
+    if not room:
+        return
+
+    host = room["players"].get(room["host_id"])
+
+    if host and host.get("connected", False):
+        return
+
+    for pid, player in room["players"].items():
+        if player.get("connected", False):
+            room["host_id"] = pid
+            socketio.emit("toast", {
+                "message": f"{player['nickname']} is now host.",
+                "type": "info"
+            }, room=room_code)
+            return
+
+
 def player_public(player):
     return {
         "id": player["id"],
@@ -202,6 +252,7 @@ def player_public(player):
         "connected": player.get("connected", True),
         "spectator": player.get("spectator", False),
         "panic_uses_left": player.get("panic_uses_left", 0),
+        "custom_prompts_count": len(player.get("custom_prompts", [])),
     }
 
 
@@ -228,6 +279,7 @@ def public_room(room_code):
         "turn_category": room.get("turn_category"),
         "speaker_queue": room.get("speaker_queue", []),
         "voting": room.get("voting", {}),
+        "sudden_death_active": room.get("sudden_death_active", False),
         "packs": [
             {"id": pack["id"], "name": pack["name"], "count": pack["count"]}
             for pack in load_packs().values()
@@ -258,6 +310,9 @@ def emit_game_state(room_code):
 
 
 def get_cards_for_category(room, category):
+    if category == "Custom Prompts":
+        return custom_prompt_cards(room)
+
     packs = load_packs()
     selected_pack_ids = room["settings"].get("packs", [])
     cards = []
@@ -276,7 +331,11 @@ def get_cards_for_category(room, category):
 
 def get_available_categories(room):
     categories = all_categories_for_packs(room["settings"].get("packs", []))
-    return categories
+
+    if room["settings"].get("enable_custom_prompts", True) and custom_prompt_cards(room):
+        categories.append("Custom Prompts")
+
+    return sorted(set(categories))
 
 
 def build_speaker_queue(room):
@@ -342,7 +401,10 @@ def start_round(room_code):
 
     if room["turn_speaker_position"] >= len(room["speaker_queue"]):
         if room["turn_number"] >= int(room["settings"]["turn_limit"]):
-            finish_game(room_code)
+            if should_start_sudden_death(room):
+                begin_sudden_death(room_code)
+            else:
+                finish_game(room_code)
             return
 
         begin_voting(room_code)
@@ -371,6 +433,49 @@ def start_round(room_code):
         "buzz_started_at": None,
         "restart_nonce": str(uuid.uuid4()),
     }
+
+    emit_game_state(room_code)
+
+
+def begin_sudden_death(room_code):
+    room = rooms[room_code]
+    room["sudden_death_active"] = True
+
+    categories = get_available_categories(room)
+    if not categories:
+        finish_game(room_code)
+        return
+
+    category = random.choice(categories)
+    cards = get_cards_for_category(room, category)
+
+    if not cards:
+        finish_game(room_code)
+        return
+
+    speaker_id = random.choice(active_player_ids(room))
+    card = random.choice(cards)
+
+    room["state"] = "playing"
+    room["turn_category"] = category
+    room["current_round"] += 1
+    room["current"] = {
+        "speaker_id": speaker_id,
+        "category": category,
+        "topic": card["topic"],
+        "letters": make_letters(),
+        "frozen": [],
+        "current_buzzer": None,
+        "answer_deadline_active": False,
+        "manual_rerolls_left": 0,
+        "buzz_started_at": None,
+        "restart_nonce": str(uuid.uuid4()),
+    }
+
+    socketio.emit("toast", {
+        "message": "Sudden Death! Next correct answer wins.",
+        "type": "info"
+    }, room=room_code)
 
     emit_game_state(room_code)
 
@@ -425,8 +530,19 @@ def end_round(room_code, result, winner_id=None, answer_time=None):
     room["last_reveal"] = reveal
     room["turn_speaker_position"] += 1
 
+    if room.get("sudden_death_active", False):
+        if result == "correct":
+            finish_game(room_code)
+            return
+
+        begin_sudden_death(room_code)
+        return
+
     if max(room["scores"].values(), default=0) >= int(room["settings"]["target_score"]):
-        finish_game(room_code)
+        if should_start_sudden_death(room):
+            begin_sudden_death(room_code)
+        else:
+            finish_game(room_code)
         return
 
     room["state"] = "reveal"
@@ -476,6 +592,7 @@ def create():
                 "connected": True,
                 "spectator": False,
                 "panic_uses_left": 1,
+                "custom_prompts": [],
             }
         },
         "scores": {player_id: 0},
@@ -492,6 +609,8 @@ def create():
             "panic_uses": 1,
             "speaker_scores": True,
             "vote_option_count": 5,
+            "sudden_death": True,
+            "enable_custom_prompts": True,
         },
         "speaker_queue": [],
         "turn_number": 0,
@@ -502,6 +621,7 @@ def create():
         "state": "lobby",
         "current": None,
         "last_reveal": None,
+        "sudden_death_active": False,
         "created_at": now(),
         "updated_at": now(),
     }
@@ -550,6 +670,7 @@ def join():
         "connected": True,
         "spectator": spectator,
         "panic_uses_left": int(room["settings"].get("panic_uses", 1)),
+        "custom_prompts": [],
     }
 
     if not spectator:
@@ -649,6 +770,7 @@ def on_disconnect():
     if room_code in rooms and player_id in rooms[room_code]["players"]:
         rooms[room_code]["players"][player_id]["connected"] = False
         touch_room(room_code)
+        transfer_host_if_needed(room_code)
         emit_game_state(room_code)
 
 
@@ -675,6 +797,8 @@ def update_settings(data):
         "panic_uses": int(data.get("panic_uses", 1)),
         "speaker_scores": bool(data.get("speaker_scores", True)),
         "vote_option_count": int(data.get("vote_option_count", 5)),
+        "sudden_death": bool(data.get("sudden_death", True)),
+        "enable_custom_prompts": bool(data.get("enable_custom_prompts", True)),
     }
 
     for p in room["players"].values():
@@ -911,6 +1035,9 @@ def panic():
     if not room or room["state"] != "playing":
         return
 
+    if room.get("sudden_death_active", False):
+        return
+
     current = room["current"]
     player = room["players"].get(player_id)
 
@@ -1016,6 +1143,63 @@ def reaction(data):
         "nickname": room["players"][player_id]["nickname"],
         "colour": room["players"][player_id]["colour"],
     }, room=room_code)
+
+
+@socketio.on("submit_custom_prompts")
+def submit_custom_prompts(data):
+    room_code = session.get("room_code")
+    player_id = session.get("player_id")
+    room = rooms.get(room_code)
+
+    if not room or player_id not in room["players"]:
+        return
+
+    prompts = data.get("prompts", [])
+
+    cleaned = []
+    for prompt in prompts:
+        prompt = str(prompt).strip()
+        if prompt and len(prompt) <= 80:
+            cleaned.append(prompt)
+
+    room["players"][player_id]["custom_prompts"] = cleaned[:5]
+
+    socketio.emit("toast", {
+        "message": f"{room['players'][player_id]['nickname']} added custom prompts.",
+        "type": "info"
+    }, room=room_code)
+
+    emit_game_state(room_code)
+
+
+@socketio.on("rematch")
+def rematch():
+    room_code = session.get("room_code")
+    player_id = session.get("player_id")
+    room = rooms.get(room_code)
+
+    if not room or room["host_id"] != player_id:
+        return
+
+    for pid, player in room["players"].items():
+        if not player.get("spectator", False):
+            room["scores"][pid] = 0
+            room["stats"][pid] = default_stats()
+            player["panic_uses_left"] = int(room["settings"].get("panic_uses", 1))
+
+    room["speaker_queue"] = []
+    room["turn_number"] = 0
+    room["turn_speaker_position"] = 0
+    room["turn_category"] = None
+    room["voting"] = {}
+    room["current_round"] = 0
+    room["state"] = "lobby"
+    room["current"] = None
+    room["last_reveal"] = None
+    room["sudden_death_active"] = False
+
+    socketio.emit("go_to_lobby", {"room_code": room_code}, room=room_code)
+    emit_game_state(room_code)
 
 
 if __name__ == "__main__":

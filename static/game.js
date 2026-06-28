@@ -23,7 +23,14 @@ socket.on("game_state", data => {
 
     const newNonce = state?.current?.restart_nonce;
 
-    if (state.state === "playing" && (oldRound !== state.current_round || oldNonce !== newNonce)) {
+    if (
+        state.state === "playing" &&
+        (
+            oldRound !== state.current_round ||
+            oldNonce !== newNonce
+        ) &&
+        !countdownActive
+    ) {
         lastRestartNonce = newNonce;
         startPreRoundCountdown();
         return;
@@ -64,6 +71,10 @@ socket.on("round_reveal", reveal => {
 
 socket.on("game_finished", data => {
     showFinalResults(data);
+});
+
+socket.on("go_to_lobby", data => {
+    window.location.href = "/lobby/" + data.room_code;
 });
 
 socket.on("toast", data => {
@@ -157,8 +168,20 @@ function render() {
             <section class="play-panel ${buzzer ? "buzz-active" : ""}">
                 <div class="game-top">
                     <div>
-                        <div class="mini-label">Turn ${state.turn_number} / ${state.settings.turn_limit}</div>
-                        <h1>${state.turn_category || current.category}</h1>
+                        <div class="mini-label">
+                            ${
+                                state.sudden_death_active
+                                ? "Winner takes all"
+                                : `Turn ${state.turn_number} / ${state.settings.turn_limit}`
+                            }
+                        </div>
+                        <h1>
+                            ${
+                                state.sudden_death_active
+                                ? "⚡ SUDDEN DEATH ⚡"
+                                : (state.turn_category || current.category)
+                            }
+                        </h1>
                     </div>
 
                     <div class="timer-strip">
@@ -259,6 +282,10 @@ function hostControls() {
 }
 
 function speakerQueue() {
+    if (state.sudden_death_active) {
+        return `<div class="queue-item active"><span>Sudden death round</span></div>`;
+    }
+
     const queue = state.speaker_queue || [];
     const position = state.turn_speaker_position || 0;
 
@@ -298,9 +325,15 @@ function speakerControls(buzzer, me) {
             </button>
 
             <button
-                ${me.panic_uses_left <= 0 || state.current.current_buzzer ? "disabled" : ""}
+                ${
+                    me.panic_uses_left <= 0 ||
+                    state.current.current_buzzer ||
+                    state.sudden_death_active
+                    ? "disabled"
+                    : ""
+                }
                 onclick="socket.emit('panic')">
-                🚨 Panic (${me.panic_uses_left})
+                🚨 Panic (${state.sudden_death_active ? 0 : me.panic_uses_left})
             </button>
 
             <button class="danger" onclick="socket.emit('speaker_foul')">I Messed Up</button>
@@ -360,7 +393,7 @@ function startPreRoundCountdown() {
                     <div class="panel countdown">
                         <div class="brand-pill">Get Ready</div>
                         <h1>${countdownLeft}</h1>
-                        <p>${state.turn_category}</p>
+                        <p>${state.turn_category || ""}</p>
                     </div>
                 </div>
             `;
@@ -492,42 +525,128 @@ function showReveal(reveal) {
     `;
 }
 
+function getAchievement(player, stats, score, topScore) {
+    if ((stats.panics || 0) > 0) {
+        return ["🚨", "Panic Merchant", "Hit the panic button when it mattered."];
+    }
+
+    if ((stats.fouls || 0) > 0) {
+        return ["💀", "Liability", "Committed the most suspicious speaker crimes."];
+    }
+
+    if ((stats.correct || 0) >= 3) {
+        return ["🧠", "Encyclopaedia", "Knew way too much."];
+    }
+
+    if ((stats.buzzes || 0) >= 8) {
+        return ["🔊", "Button Masher", "Could not stop buzzing."];
+    }
+
+    if ((stats.frozen || 0) >= 3) {
+        return ["🥶", "Ice Age", "Spent half the game frozen out."];
+    }
+
+    if (score === topScore) {
+        return ["🏆", "Main Character", "Finished at the top."];
+    }
+
+    return ["🎲", "Chaos Contributor", "Added essential nonsense to the game."];
+}
+
+function getTitle(player, stats, score, topScore) {
+    if (score === topScore) return "The Champion";
+    if ((stats.speaker_success || 0) >= 3) return "The Storyteller";
+    if ((stats.correct || 0) >= 3) return "The Human Google";
+    if ((stats.panics || 0) > 0) return "The Panic Buyer";
+    if ((stats.frozen || 0) >= 3) return "The Chiller";
+    if ((stats.buzzes || 0) >= 8) return "The Button Gremlin";
+    return "The Wildcard";
+}
+
 function showFinalResults(data) {
     clearAllTimers();
     playSound("win.wav", 0.8);
 
     const players = Object.values(data.players).filter(p => !p.spectator);
     const sorted = players.sort((a, b) => data.scores[b.id] - data.scores[a.id]);
-    const winner = sorted[0];
+    const topScore = data.scores[sorted[0].id];
+    const winners = sorted.filter(p => data.scores[p.id] === topScore);
+
+    const winnerText = winners.length > 1
+        ? `Joint winners: ${winners.map(p => p.nickname).join(", ")}`
+        : `${sorted[0].nickname} wins!`;
 
     document.getElementById("game").innerHTML = `
         <div class="center-screen scroll-safe">
             <div class="panel final-card">
                 <div class="brand-pill">Game Over</div>
-                <h1>🏆 ${winner.nickname} wins!</h1>
+                <h1>🏆 ${winnerText}</h1>
 
                 <h2>Final Scores</h2>
                 ${sorted.map(p => `
                     <div class="score-row">
                         <div class="player-left">
-                            <span class="avatar small" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
+                            <span class="avatar small" style="background:${p.colour}">
+                                ${p.nickname[0].toUpperCase()}
+                            </span>
                             <span>${p.nickname}</span>
                         </div>
                         <strong>${data.scores[p.id]}</strong>
                     </div>
                 `).join("")}
 
+                <h2>Secret Achievements</h2>
+                <div class="achievement-grid">
+                    ${sorted.map(p => {
+                        const stats = data.stats[p.id] || {};
+                        const achievement = getAchievement(
+                            p,
+                            stats,
+                            data.scores[p.id],
+                            topScore
+                        );
+
+                        const title = getTitle(
+                            p,
+                            stats,
+                            data.scores[p.id],
+                            topScore
+                        );
+
+                        return `
+                            <div class="achievement-card">
+                                <div class="achievement-icon">
+                                    ${achievement[0]}
+                                </div>
+
+                                <div>
+                                    <strong>${p.nickname}</strong>
+                                    <span>${title}</span>
+                                    <h3>${achievement[1]}</h3>
+                                    <p>${achievement[2]}</p>
+                                </div>
+                            </div>
+                        `;
+                    }).join("")}
+                </div>
+
                 <h2>Stats</h2>
                 ${sorted.map(p => `
                     <div class="stat-row">
                         <strong>${p.nickname}</strong>
                         <span>Correct: ${data.stats[p.id].correct || 0}</span>
-                        <span>Speaker success: ${data.stats[p.id].speaker_success || 0}</span>
+                        <span>Speaker: ${data.stats[p.id].speaker_success || 0}</span>
                         <span>Panics: ${data.stats[p.id].panics || 0}</span>
                         <span>Frozen: ${data.stats[p.id].frozen || 0}</span>
                         <span>Buzzes: ${data.stats[p.id].buzzes || 0}</span>
                     </div>
                 `).join("")}
+
+                ${
+                    state.you === state.host_id
+                    ? `<button onclick="socket.emit('rematch')">Rematch</button>`
+                    : ""
+                }
 
                 <a href="/" class="button-link">New Game</a>
             </div>

@@ -655,3 +655,55 @@ p {
         margin: 5px 0;
     }
 }
+
+.achievement-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.achievement-card {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 12px;
+    background: rgba(255,255,255,0.055);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px;
+}
+
+.achievement-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    font-size: 28px;
+    background: linear-gradient(135deg, var(--orange), var(--pink));
+}
+
+.achievement-card span {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.achievement-card h3 {
+    margin: 4px 0;
+}
+
+.achievement-card p {
+    margin: 0;
+    font-size: 13px;
+}
+
+.custom-prompt {
+    margin-bottom: 8px;
+}
+
+@media (max-width: 850px) {
+    .achievement-grid {
+        grid-template-columns: 1fr;
+    }
+}
