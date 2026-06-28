@@ -1,201 +1,166 @@
 Category,Topic
-Games,Minecraft
-Games,Fortnite
-Games,Roblox
-Games,Grand Theft Auto
-Games,Call of Duty
-Games,EA FC
-Games,Mario
-Games,Pokémon
-Games,The Legend of Zelda
-Games,Sonic the Hedgehog
-Games,Crash Bandicoot
-Games,Spyro
-Games,Animal Crossing
-Games,Rocket League
-Games,Among Us
-Games,Fall Guys
-Games,The Sims
-Games,Wii Sports
-Games,Gran Turismo
-Games,Forza
-Games,Need for Speed
-Games,F1
-Games,Football Manager
-Games,Tony Hawk
-Games,Guitar Hero
-Games,Just Dance
-Games,Street Fighter
-Games,Mortal Kombat
-Games,Tekken
-Games,Pac-Man
-Games,Tetris
-Games,Space Invaders
-Games,Halo
-Games,Red Dead Redemption
-Games,Assassin's Creed
-Games,God of War
-Games,The Last of Us
-Games,Uncharted
-Games,Spider-Man
-Games,Batman Arkham
-Games,Lego Games
-Games,World of Warcraft
-Games,RuneScape
-Games,League of Legends
-Games,Valorant
-Games,Counter-Strike
-Games,Apex Legends
-Games,Overwatch
-Games,Battlefield
-Games,PUBG
-Games,Clash of Clans
-Games,Clash Royale
-Games,Candy Crush
-Games,Angry Birds
-Games,Temple Run
-Games,Subway Surfers
-Games,Fruit Ninja
-Games,Plants vs Zombies
-Games,Brawl Stars
-Games,Marvel Snap
-Games,Skyrim
-Games,Fallout
-Games,Elden Ring
-Games,Dark Souls
-Games,Baldur's Gate
-Games,The Witcher
-Games,Cyberpunk
-Games,Diablo
-Games,StarCraft
-Games,Dota
-Games,Final Fantasy
-Games,Kingdom Hearts
-Games,Persona
-Games,Monster Hunter
-Games,Metal Gear Solid
-Games,Resident Evil
-Games,Silent Hill
-Games,Five Nights at Freddy's
-Games,Dead by Daylight
-Games,Doom
-Games,Portal
-Games,Half-Life
-Games,Terraria
-Games,Stardew Valley
-Games,Hades
-Games,Cuphead
-Games,Hollow Knight
-Games,Bioshock
-Games,Mass Effect
-Games,Borderlands
-Games,Far Cry
-Games,Hitman
-Games,Sea of Thieves
-Games,No Man's Sky
-Games,Ark Survival Evolved
-Games,Rust
-Games,Subnautica
-Games,Palworld
-Games,Helldivers
-Games,Donkey Kong
-Games,Kirby
-Games,Metroid
-Games,Pikmin
-Games,Luigi's Mansion
-Games,Rayman
-Games,LittleBigPlanet
-Games,Ratchet and Clank
-Games,Jak and Daxter
-Games,Banjo-Kazooie
-Games,GoldenEye
-Games,Worms
-Games,Age of Empires
-Games,Civilization
-Games,Total War
-Games,Goat Simulator
-Games,Microsoft Flight Simulator
-Games,Euro Truck Simulator
-Games,Farming Simulator
-Games,SimCity
-Games,Cities Skylines
-Games,RollerCoaster Tycoon
-Games,Zoo Tycoon
-Games,Theme Hospital
-Games,Two Point Hospital
-Games,Dragon Quest
-Games,Gears of War
-Games,Alan Wake
-Games,Control
-Games,Death Stranding
-Games,Mafia
-Games,Saints Row
-Games,Sleeping Dogs
-Games,Driver
-Games,Crazy Taxi
-Games,Lemmings
-Games,Club Penguin
-Games,Moshi Monsters
-Games,Habbo Hotel
-Games,Neopets
-Games,Paper Mario
-Games,Fire Emblem
-Games,XCOM
-Games,Prince of Persia
-Games,WWE 2K
-Games,NBA 2K
-Games,Madden NFL
-Games,PGA Tour
-Games,EA Sports UFC
-Games,Nintendo
-Games,PlayStation
-Games,Xbox
-Games,Steam
-Games,Game Boy
-Games,Nintendo Switch
-Games,PlayStation 2
-Games,Xbox 360
-Games,Atari
-Games,Sega
-Games,Master Chief
-Games,Lara Croft
-Games,Pikachu
-Games,Mario Kart
-Games,Super Smash Bros
-Games,Mario Party
-Games,Splatoon
-Games,Pokemon Go
-Games,Pokemon Unite
-Games,Roblox Doors
-Games,Bendy and the Ink Machine
-Games,Poppy Playtime
-Games,Balatro
-Games,Geometry Dash
-Games,Trackmania
-Games,Peggle
-Games,PowerWash Simulator
-Games,Goose Game
-Games,The Forest
-Games,Sons of the Forest
-Games,Raft
-Games,Among Trees
-Games,Kerbal Space Program
-Games,The Crew
-Games,Burnout
-Games,WRC
-Games,Dirt Rally
-Games,Skate
-Games,SSX
-Games,Fable
-Games,Dragon Age
-Games,Yakuza
-Games,Like a Dragon
-Games,Undertale
-Games,Celeste
-Games,Team Fortress
-Games,Left 4 Dead
-Games,Garry's Mod
-Games,War Thunder
-Games,World of Tanks
-Games,Command and Conquer
-Games,Pokemon Snap
+Nintendo,Mario
+Nintendo,Luigi
+Nintendo,Princess Peach
+Nintendo,Bowser
+Nintendo,Donkey Kong
+Nintendo,Kirby
+Nintendo,Link
+Nintendo,Zelda
+Nintendo,Yoshi
+Nintendo,Toad
+Nintendo,Pikachu
+Nintendo,Animal Crossing
+Nintendo,Mario Kart
+Nintendo,Super Smash Bros
+Nintendo,Nintendo Switch
+PlayStation,PlayStation 2
+PlayStation,PlayStation 5
+PlayStation,God of War
+PlayStation,The Last of Us
+PlayStation,Uncharted
+PlayStation,Gran Turismo
+PlayStation,Spider-Man
+PlayStation,Ratchet and Clank
+PlayStation,Crash Bandicoot
+PlayStation,Spyro
+PlayStation,LittleBigPlanet
+PlayStation,Bloodborne
+PlayStation,Horizon
+PlayStation,Ghost of Tsushima
+PlayStation,Sackboy
+Xbox,Xbox 360
+Xbox,Xbox Series X
+Xbox,Halo
+Xbox,Master Chief
+Xbox,Forza Horizon
+Xbox,Gears of War
+Xbox,Fable
+Xbox,Sea of Thieves
+Xbox,Minecraft
+Xbox,Game Pass
+Xbox,Kinect
+Xbox,Banjo-Kazooie
+Xbox,Perfect Dark
+Xbox,Flight Simulator
+Xbox,Age of Empires
+PC Gaming,Steam
+PC Gaming,World of Warcraft
+PC Gaming,League of Legends
+PC Gaming,Counter-Strike
+PC Gaming,Valorant
+PC Gaming,Dota 2
+PC Gaming,The Sims
+PC Gaming,Football Manager
+PC Gaming,RuneScape
+PC Gaming,Among Us
+PC Gaming,Minecraft
+PC Gaming,Roblox
+PC Gaming,Half-Life
+PC Gaming,Portal
+PC Gaming,Garry's Mod
+Minecraft,Creeper
+Minecraft,Enderman
+Minecraft,Steve
+Minecraft,Alex
+Minecraft,Herobrine
+Minecraft,Diamond Sword
+Minecraft,Nether
+Minecraft,Ender Dragon
+Minecraft,Zombie
+Minecraft,Skeleton
+Minecraft,Villager
+Minecraft,Redstone
+Minecraft,Pickaxe
+Minecraft,Crafting Table
+Minecraft,TNT
+Pokémon,Pikachu
+Pokémon,Charizard
+Pokémon,Bulbasaur
+Pokémon,Squirtle
+Pokémon,Mewtwo
+Pokémon,Eevee
+Pokémon,Jigglypuff
+Pokémon,Snorlax
+Pokémon,Meowth
+Pokémon,Ash Ketchum
+Pokémon,Team Rocket
+Pokémon,Poké Ball
+Pokémon,Gengar
+Pokémon,Lucario
+Pokémon,Greninja
+Mario,Mario
+Mario,Luigi
+Mario,Princess Peach
+Mario,Bowser
+Mario,Yoshi
+Mario,Toad
+Mario,Donkey Kong
+Mario,Wario
+Mario,Waluigi
+Mario,Princess Daisy
+Mario,Goomba
+Mario,Koopa Troopa
+Mario,Rainbow Road
+Mario,Mushroom Kingdom
+Mario,Mario Kart
+GTA,Grand Theft Auto
+GTA,GTA V
+GTA,GTA Online
+GTA,Los Santos
+GTA,Trevor
+GTA,Franklin
+GTA,Michael
+GTA,CJ
+GTA,San Andreas
+GTA,Vice City
+GTA,Liberty City
+GTA,Rockstar Games
+GTA,Lester
+GTA,Grove Street
+GTA,Heist
+Call of Duty,Call of Duty
+Call of Duty,Warzone
+Call of Duty,Black Ops
+Call of Duty,Modern Warfare
+Call of Duty,Zombies
+Call of Duty,Captain Price
+Call of Duty,Ghost
+Call of Duty,Soap MacTavish
+Call of Duty,Nuketown
+Call of Duty,Gulag
+Call of Duty,Team Deathmatch
+Call of Duty,Search and Destroy
+Call of Duty,Prestige
+Call of Duty,Killstreak
+Call of Duty,Campaign
+Fortnite,Battle Royale
+Fortnite,Victory Royale
+Fortnite,Tilted Towers
+Fortnite,Battle Bus
+Fortnite,V-Bucks
+Fortnite,Peely
+Fortnite,Jonesy
+Fortnite,Loot Llama
+Fortnite,Storm
+Fortnite,Chug Jug
+Fortnite,Pickaxe
+Fortnite,Emotes
+Fortnite,Skins
+Fortnite,Creative Mode
+Fortnite,Zero Build
+FIFA / EA FC,Ultimate Team
+FIFA / EA FC,Career Mode
+FIFA / EA FC,Kick Off
+FIFA / EA FC,Volta
+FIFA / EA FC,Kylian Mbappe
+FIFA / EA FC,Erling Haaland
+FIFA / EA FC,Lionel Messi
+FIFA / EA FC,Cristiano Ronaldo
+FIFA / EA FC,Alex Hunter
+FIFA / EA FC,Packs
+FIFA / EA FC,TOTY
+FIFA / EA FC,Icons
+FIFA / EA FC,Champions League
+FIFA / EA FC,Weekend League
+FIFA / EA FC,EA Sports

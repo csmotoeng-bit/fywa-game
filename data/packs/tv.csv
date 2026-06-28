@@ -1,158 +1,121 @@
 Category,Topic
-TV,Friends
-TV,The Office
-TV,The Simpsons
-TV,Family Guy
-TV,South Park
-TV,Breaking Bad
-TV,Better Call Saul
-TV,Game of Thrones
-TV,House of the Dragon
-TV,Stranger Things
-TV,Wednesday
-TV,The Last of Us
-TV,The Walking Dead
-TV,Doctor Who
-TV,Top Gear
-TV,The Grand Tour
-TV,Only Fools and Horses
-TV,Gavin and Stacey
-TV,The Inbetweeners
-TV,Peaky Blinders
-TV,Line of Duty
-TV,EastEnders
-TV,Coronation Street
-TV,Emmerdale
-TV,Love Island
-TV,I'm a Celebrity Get Me Out of Here
-TV,Britain's Got Talent
-TV,The X Factor
-TV,Strictly Come Dancing
-TV,The Apprentice
-TV,Dragons' Den
-TV,Bluey
-TV,SpongeBob SquarePants
-TV,Scooby-Doo
-TV,Tom and Jerry
-TV,The Fresh Prince of Bel-Air
-TV,Brooklyn Nine-Nine
-TV,How I Met Your Mother
-TV,The Big Bang Theory
-TV,Modern Family
-TV,Prison Break
-TV,Lost
-TV,24
-TV,Sherlock
-TV,The Crown
-TV,Black Mirror
-TV,The Mandalorian
-TV,The Boys
-TV,Loki
-TV,The Bear
-TV,The Traitors
-TV,Taskmaster
-TV,The Chase
-TV,Who Wants to Be a Millionaire
-TV,Deal or No Deal
-TV,Gladiators
-TV,Mr Bean
-TV,Benidorm
-TV,Skins
-TV,Downton Abbey
-TV,Broadchurch
-TV,The IT Crowd
-TV,Rick and Morty
-TV,Blue Peter
-TV,Postman Pat
-TV,Thomas and Friends
-TV,Teletubbies
-TV,Power Rangers
-TV,Pokémon
-TV,Dragon Ball Z
-TV,Narcos
-TV,Money Heist
-TV,Squid Game
-TV,Reacher
-TV,NCIS
-TV,CSI
-TV,Grey's Anatomy
-TV,House
-TV,Ted Lasso
-TV,The Rookie
-TV,Casualty
-TV,Waterloo Road
-TV,Happy Valley
-TV,Midsomer Murders
-TV,Father Ted
-TV,Derry Girls
-TV,Fleabag
-TV,Bodyguard
-TV,Red Dwarf
-TV,Blackadder
-TV,Fawlty Towers
-TV,Little Britain
-TV,Would I Lie to You
-TV,QI
-TV,Gogglebox
-TV,MasterChef
-TV,The Great British Bake Off
-TV,Pointless
-TV,Countdown
-TV,Family Fortunes
-TV,Match of the Day
-TV,Formula 1 Drive to Survive
-TV,Clarkson's Farm
-TV,Big Brother
-TV,The Masked Singer
-TV,The Voice UK
-TV,Bridgerton
-TV,The Queen's Gambit
-TV,Dexter
-TV,Suits
-TV,The Sopranos
-TV,Mad Men
-TV,Chernobyl
-TV,Sex Education
-TV,The Witcher
-TV,Cobra Kai
-TV,Hannah Montana
-TV,Phineas and Ferb
-TV,Adventure Time
-TV,Ben 10
-TV,Paw Patrol
-TV,Peppa Pig
-TV,Bob the Builder
-TV,Fireman Sam
-TV,Wallace and Gromit
-TV,Star Trek
-TV,The X-Files
-TV,Buffy the Vampire Slayer
-TV,Supernatural
-TV,Arrow
-TV,The Flash
-TV,Yellowstone
-TV,Succession
-TV,Euphoria
-TV,Riverdale
-TV,The Vampire Diaries
-TV,Baywatch
-TV,The A-Team
-TV,Miami Vice
-TV,Columbo
-TV,Neighbours
-TV,Home and Away
-TV,The Bill
-TV,Friday Night Dinner
-TV,Outnumbered
-TV,Miranda
-TV,Still Game
-TV,Horrible Histories
-TV,Merlin
-TV,Torchwood
-TV,Planet Earth
-TV,Blue Planet
-TV,This Morning
-TV,Good Morning Britain
-TV,Loose Women
-TV,RuPaul's Drag Race
-TV,Come Dine with Me
+Sitcoms,Friends
+Sitcoms,The Office
+Sitcoms,Only Fools and Horses
+Sitcoms,Gavin and Stacey
+Sitcoms,The Inbetweeners
+Sitcoms,The Big Bang Theory
+Sitcoms,Brooklyn Nine-Nine
+Sitcoms,How I Met Your Mother
+Sitcoms,Modern Family
+Sitcoms,The IT Crowd
+Sitcoms,Fawlty Towers
+Sitcoms,Blackadder
+Sitcoms,Father Ted
+Sitcoms,Friday Night Dinner
+Sitcoms,Outnumbered
+Cartoons,The Simpsons
+Cartoons,Family Guy
+Cartoons,South Park
+Cartoons,SpongeBob SquarePants
+Cartoons,Scooby-Doo
+Cartoons,Tom and Jerry
+Cartoons,Bluey
+Cartoons,Peppa Pig
+Cartoons,Pokémon
+Cartoons,Dragon Ball Z
+Cartoons,Ben 10
+Cartoons,Adventure Time
+Cartoons,Power Rangers
+Cartoons,Paw Patrol
+Cartoons,Phineas and Ferb
+British TV,Doctor Who
+British TV,Top Gear
+British TV,The Grand Tour
+British TV,Only Fools and Horses
+British TV,Gavin and Stacey
+British TV,Peaky Blinders
+British TV,Line of Duty
+British TV,Sherlock
+British TV,Luther
+British TV,Happy Valley
+British TV,Downton Abbey
+British TV,Broadchurch
+British TV,Mr Bean
+British TV,Taskmaster
+British TV,Clarkson's Farm
+Reality TV,Love Island
+Reality TV,I'm a Celebrity
+Reality TV,Big Brother
+Reality TV,The Apprentice
+Reality TV,Strictly Come Dancing
+Reality TV,Britain's Got Talent
+Reality TV,The X Factor
+Reality TV,The Voice UK
+Reality TV,The Masked Singer
+Reality TV,Dragons' Den
+Reality TV,Gogglebox
+Reality TV,First Dates
+Reality TV,Come Dine with Me
+Reality TV,MasterChef
+Reality TV,The Great British Bake Off
+Netflix,Stranger Things
+Netflix,Wednesday
+Netflix,Squid Game
+Netflix,The Crown
+Netflix,Black Mirror
+Netflix,Bridgerton
+Netflix,Money Heist
+Netflix,Narcos
+Netflix,The Witcher
+Netflix,Cobra Kai
+Netflix,Sex Education
+Netflix,The Queen's Gambit
+Netflix,Drive to Survive
+Netflix,You
+Netflix,Dahmer
+TV Characters,Homer Simpson
+TV Characters,Bart Simpson
+TV Characters,Del Boy
+TV Characters,Rodney Trotter
+TV Characters,David Brent
+TV Characters,Mr Bean
+TV Characters,Eleven
+TV Characters,Walter White
+TV Characters,Jon Snow
+TV Characters,Tommy Shelby
+TV Characters,Doctor Who
+TV Characters,SpongeBob
+TV Characters,Rick Sanchez
+TV Characters,Sheldon Cooper
+TV Characters,Joey Tribbiani
+Game Shows,The Chase
+Game Shows,Pointless
+Game Shows,Who Wants to Be a Millionaire
+Game Shows,Deal or No Deal
+Game Shows,Family Fortunes
+Game Shows,Catchphrase
+Game Shows,Countdown
+Game Shows,The Weakest Link
+Game Shows,University Challenge
+Game Shows,Tipping Point
+Game Shows,Blankety Blank
+Game Shows,Wheel of Fortune
+Game Shows,Gladiators
+Game Shows,Would I Lie to You
+Game Shows,Taskmaster
+Soap Operas,EastEnders
+Soap Operas,Coronation Street
+Soap Operas,Emmerdale
+Soap Operas,Hollyoaks
+Soap Operas,Neighbours
+Soap Operas,Home and Away
+Soap Operas,The Bill
+Soap Operas,Casualty
+Soap Operas,Holby City
+Soap Operas,Brookside
+Soap Operas,Doctors
+Soap Operas,Waterloo Road
+Soap Operas,River City
+Soap Operas,Dallas
+Soap Operas,Dynasty

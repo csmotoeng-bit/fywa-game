@@ -1,169 +1,241 @@
 Category,Topic
-Sport,Premier League
-Sport,FA Cup
-Sport,Champions League
-Sport,Europa League
-Sport,World Cup
-Sport,European Championship
-Sport,Wimbledon
-Sport,The Ashes
-Sport,Six Nations
-Sport,Formula 1
-Sport,Olympics
-Sport,Paralympics
-Sport,Commonwealth Games
-Sport,Ryder Cup
-Sport,The Masters
-Sport,Grand National
-Sport,Cheltenham Festival
-Sport,Tour de France
-Sport,London Marathon
-Sport,Manchester United
-Sport,Liverpool
-Sport,Arsenal
-Sport,Chelsea
-Sport,Manchester City
-Sport,Tottenham Hotspur
-Sport,Newcastle United
-Sport,Aston Villa
-Sport,Everton
-Sport,Leeds United
-Sport,Celtic
-Sport,Rangers
-Sport,England Football Team
-Sport,Scotland Football Team
-Sport,Wales Football Team
-Sport,England Cricket Team
-Sport,England Rugby Team
-Sport,David Beckham
-Sport,Wayne Rooney
-Sport,Harry Kane
-Sport,Jude Bellingham
-Sport,Bukayo Saka
-Sport,Steven Gerrard
-Sport,Frank Lampard
-Sport,Alan Shearer
-Sport,Gary Lineker
-Sport,Cristiano Ronaldo
-Sport,Lionel Messi
-Sport,Kylian Mbappe
-Sport,Erling Haaland
-Sport,Mohamed Salah
-Sport,Pele
-Sport,Diego Maradona
-Sport,Lewis Hamilton
-Sport,Lando Norris
-Sport,Max Verstappen
-Sport,Michael Schumacher
-Sport,Ayrton Senna
-Sport,Andy Murray
-Sport,Emma Raducanu
-Sport,Novak Djokovic
-Sport,Roger Federer
-Sport,Rafael Nadal
-Sport,Carlos Alcaraz
-Sport,Tyson Fury
-Sport,Anthony Joshua
-Sport,Muhammad Ali
-Sport,Mike Tyson
-Sport,Conor McGregor
-Sport,Tom Aspinall
-Sport,Ronnie O'Sullivan
-Sport,Luke Littler
-Sport,Phil Taylor
-Sport,Rory McIlroy
-Sport,Tiger Woods
-Sport,Mo Farah
-Sport,Usain Bolt
-Sport,Jessica Ennis-Hill
-Sport,Chris Hoy
-Sport,Tom Daley
-Sport,Adam Peaty
-Sport,Michael Phelps
-Sport,LeBron James
-Sport,Michael Jordan
-Sport,Kobe Bryant
-Sport,Tom Brady
-Sport,Valentino Rossi
-Sport,Marc Marquez
-Sport,MotoGP
-Sport,Le Mans
-Sport,Isle of Man TT
-Sport,Wembley Stadium
-Sport,Old Trafford
-Sport,Anfield
-Sport,Silverstone
-Sport,Twickenham
-Sport,Lord's Cricket Ground
-Sport,New Zealand All Blacks
-Sport,South Africa Springboks
-Sport,British and Irish Lions
-Sport,WrestleMania
-Sport,Super Bowl
-Sport,NBA Finals
-Sport,Real Madrid
-Sport,Barcelona
-Sport,Bayern Munich
-Sport,PSG
-Sport,AC Milan
-Sport,Inter Milan
-Sport,Juventus
-Sport,Borussia Dortmund
-Sport,Ajax
-Sport,Virgil van Dijk
-Sport,Kevin De Bruyne
-Sport,Neymar
-Sport,Zinedine Zidane
-Sport,Ronaldo Nazario
-Sport,Roy Keane
-Sport,Didier Drogba
-Sport,Sergio Aguero
-Sport,Mary Earps
-Sport,Lucy Bronze
-Sport,Beth Mead
-Sport,Virat Kohli
-Sport,Sachin Tendulkar
-Sport,Ben Stokes
-Sport,Joe Root
-Sport,Jimmy Anderson
-Sport,Jos Buttler
-Sport,Shane Warne
-Sport,Jonny Wilkinson
-Sport,Maro Itoje
-Sport,Dan Carter
-Sport,Richie McCaw
-Sport,Floyd Mayweather
-Sport,Khabib Nurmagomedov
-Sport,Jon Jones
-Sport,Stephen Hendry
-Sport,Judd Trump
-Sport,Luke Humphries
-Sport,Michael van Gerwen
-Sport,Jack Nicklaus
-Sport,Nick Faldo
-Sport,Justin Rose
-Sport,Bradley Wiggins
-Sport,Mark Cavendish
-Sport,Laura Kenny
-Sport,Katie Ledecky
-Sport,Simone Biles
-Sport,Patrick Mahomes
-Sport,Travis Kelce
-Sport,Chicago Bulls
-Sport,LA Lakers
-Sport,Golden State Warriors
-Sport,New York Yankees
-Sport,Dallas Cowboys
-Sport,Kansas City Chiefs
-Sport,The Hundred
-Sport,Darts World Championship
-Sport,Snooker World Championship
-Sport,Women's Super League
-Sport,EFL Championship
-Sport,League One
-Sport,League Two
-Sport,Community Shield
-Sport,Monaco Grand Prix
-Sport,British Superbikes
-Sport,World Superbikes
-Sport,Aintree Racecourse
+Football,Manchester United
+Football,Liverpool
+Football,Arsenal
+Football,Chelsea
+Football,Manchester City
+Football,Tottenham Hotspur
+Football,Newcastle United
+Football,Celtic
+Football,Rangers
+Football,England Football Team
+Football,David Beckham
+Football,Wayne Rooney
+Football,Harry Kane
+Football,Jude Bellingham
+Football,Cristiano Ronaldo
+Formula 1,Lewis Hamilton
+Formula 1,Max Verstappen
+Formula 1,Lando Norris
+Formula 1,George Russell
+Formula 1,Michael Schumacher
+Formula 1,Ayrton Senna
+Formula 1,Fernando Alonso
+Formula 1,Charles Leclerc
+Formula 1,Sebastian Vettel
+Formula 1,Silverstone
+Formula 1,Monaco Grand Prix
+Formula 1,Ferrari
+Formula 1,Red Bull Racing
+Formula 1,McLaren
+Formula 1,Mercedes
+MotoGP,Valentino Rossi
+MotoGP,Marc Marquez
+MotoGP,Fabio Quartararo
+MotoGP,Francesco Bagnaia
+MotoGP,Jorge Lorenzo
+MotoGP,Casey Stoner
+MotoGP,Ducati
+MotoGP,Yamaha
+MotoGP,Honda
+MotoGP,Suzuki
+MotoGP,Silverstone MotoGP
+MotoGP,Mugello
+MotoGP,Assen
+MotoGP,Le Mans
+MotoGP,MotoGP
+Olympics,Usain Bolt
+Olympics,Mo Farah
+Olympics,Jessica Ennis-Hill
+Olympics,Tom Daley
+Olympics,Adam Peaty
+Olympics,Simone Biles
+Olympics,Michael Phelps
+Olympics,Chris Hoy
+Olympics,Laura Kenny
+Olympics,Olympic Torch
+Olympics,Gold Medal
+Olympics,London 2012
+Olympics,Tokyo 2020
+Olympics,Paris 2024
+Olympics,Olympic Rings
+Tennis,Andy Murray
+Tennis,Emma Raducanu
+Tennis,Novak Djokovic
+Tennis,Roger Federer
+Tennis,Rafael Nadal
+Tennis,Serena Williams
+Tennis,Venus Williams
+Tennis,Carlos Alcaraz
+Tennis,Coco Gauff
+Tennis,Wimbledon
+Tennis,Centre Court
+Tennis,US Open
+Tennis,French Open
+Tennis,Australian Open
+Tennis,Tennis Racket
+Boxing,Tyson Fury
+Boxing,Anthony Joshua
+Boxing,Muhammad Ali
+Boxing,Mike Tyson
+Boxing,Floyd Mayweather
+Boxing,Manny Pacquiao
+Boxing,Ricky Hatton
+Boxing,Amir Khan
+Boxing,Joe Calzaghe
+Boxing,Oleksandr Usyk
+Boxing,Knockout
+Boxing,Heavyweight
+Boxing,Boxing Ring
+Boxing,Wembley Fight
+Boxing,Undisputed Champion
+UFC,Conor McGregor
+UFC,Khabib Nurmagomedov
+UFC,Jon Jones
+UFC,Tom Aspinall
+UFC,Michael Bisping
+UFC,Paddy Pimblett
+UFC,Israel Adesanya
+UFC,Ronda Rousey
+UFC,Nate Diaz
+UFC,Dana White
+UFC,Octagon
+UFC,Submission
+UFC,Knockout
+UFC,UFC Belt
+UFC,Fight Night
+Rugby,England Rugby
+Rugby,Wales Rugby
+Rugby,Scotland Rugby
+Rugby,Ireland Rugby
+Rugby,New Zealand All Blacks
+Rugby,South Africa Springboks
+Rugby,Six Nations
+Rugby,Rugby World Cup
+Rugby,Jonny Wilkinson
+Rugby,Owen Farrell
+Rugby,Maro Itoje
+Rugby,Brian O'Driscoll
+Rugby,Dan Carter
+Rugby,Twickenham
+Rugby,British and Irish Lions
+Cricket,The Ashes
+Cricket,England Cricket
+Cricket,Ben Stokes
+Cricket,Joe Root
+Cricket,Jimmy Anderson
+Cricket,Stuart Broad
+Cricket,Jos Buttler
+Cricket,Virat Kohli
+Cricket,Sachin Tendulkar
+Cricket,Shane Warne
+Cricket,Lord's
+Cricket,The Oval
+Cricket,Cricket World Cup
+Cricket,T20
+Cricket,The Hundred
+Golf,Tiger Woods
+Golf,Rory McIlroy
+Golf,The Masters
+Golf,Ryder Cup
+Golf,Augusta
+Golf,St Andrews
+Golf,Justin Rose
+Golf,Nick Faldo
+Golf,Seve Ballesteros
+Golf,Tommy Fleetwood
+Golf,Golf Cart
+Golf,Green Jacket
+Golf,Hole in One
+Golf,PGA Tour
+Golf,The Open
+Darts,Luke Littler
+Darts,Phil Taylor
+Darts,Michael van Gerwen
+Darts,Luke Humphries
+Darts,Peter Wright
+Darts,Gerwyn Price
+Darts,Raymond van Barneveld
+Darts,Ally Pally
+Darts,180
+Darts,Bullseye
+Darts,Darts World Championship
+Darts,Walk-on Music
+Darts,Double Top
+Darts,Nine-Darter
+Darts,PDC
+Snooker,Ronnie O'Sullivan
+Snooker,Stephen Hendry
+Snooker,Steve Davis
+Snooker,Judd Trump
+Snooker,John Higgins
+Snooker,Mark Selby
+Snooker,The Crucible
+Snooker,World Snooker Championship
+Snooker,147 Break
+Snooker,Cue Ball
+Snooker,Snooker Table
+Snooker,Pink Ball
+Snooker,Black Ball
+Snooker,Safety Shot
+Snooker,Potting
+NBA,Michael Jordan
+NBA,LeBron James
+NBA,Kobe Bryant
+NBA,Stephen Curry
+NBA,Shaquille O'Neal
+NBA,Chicago Bulls
+NBA,LA Lakers
+NBA,Golden State Warriors
+NBA,Boston Celtics
+NBA,NBA Finals
+NBA,Slam Dunk
+NBA,Three Pointer
+NBA,Basketball Hoop
+NBA,Space Jam
+NBA,Air Jordan
+NFL,Tom Brady
+NFL,Patrick Mahomes
+NFL,Travis Kelce
+NFL,Kansas City Chiefs
+NFL,New England Patriots
+NFL,Dallas Cowboys
+NFL,Super Bowl
+NFL,NFL Draft
+NFL,Touchdown
+NFL,Quarterback
+NFL,American Football
+NFL,Halftime Show
+NFL,Taylor Swift at the NFL
+NFL,Miami Dolphins
+NFL,New York Giants
+WWE,The Rock
+WWE,John Cena
+WWE,Stone Cold Steve Austin
+WWE,The Undertaker
+WWE,Roman Reigns
+WWE,Hulk Hogan
+WWE,Triple H
+WWE,Randy Orton
+WWE,Rey Mysterio
+WWE,WrestleMania
+WWE,Royal Rumble
+WWE,Money in the Bank
+WWE,SmackDown
+WWE,Raw
+WWE,WWE Championship
+Sports Personalities,Gary Lineker
+Sports Personalities,Alex Scott
+Sports Personalities,Ian Wright
+Sports Personalities,Alan Shearer
+Sports Personalities,Micah Richards
+Sports Personalities,Roy Keane
+Sports Personalities,Jamie Carragher
+Sports Personalities,Toto Wolff
+Sports Personalities,Eddie Hearn
+Sports Personalities,Dana White
+Sports Personalities,David Beckham
+Sports Personalities,Lewis Hamilton
+Sports Personalities,Mo Farah
+Sports Personalities,Tyson Fury
+Sports Personalities,Ronnie O'Sullivan

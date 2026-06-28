@@ -8,28 +8,38 @@
 <body>
 <div class="page center">
     <div class="card home-card">
-        <div class="brand-pill">FYWA</div>
+        <div class="brand-pill">FYWA Party Games</div>
         <h1>F*ck You On About?</h1>
-        <p class="subtitle">A chaotic speaker-vs-guessers party game.</p>
+        <p class="subtitle">A chaotic voice-chat party game about describing absolute nonsense with limited letters.</p>
 
         <div class="how-to-play">
             <h2>How to Play</h2>
             <ol>
-                <li>Join a room with a nickname and room code.</li>
-                <li>One player becomes the speaker each round.</li>
+                <li>At the start of each turn, everyone votes for the category.</li>
+                <li>One turn means every player gets one round as speaker.</li>
                 <li>The speaker sees the secret topic and 7 allowed letters.</li>
-                <li>Guessers see the letters but not the topic.</li>
-                <li>Speaker describes the topic in Discord or voice chat.</li>
-                <li>Guessers buzz in when they know the answer.</li>
-                <li>Wrong answer = frozen out for the round.</li>
-                <li>Correct answer = guesser and speaker both score.</li>
-                <li>If the speaker messes up, everyone else scores.</li>
+                <li>Letters can be used in any order.</li>
+                <li>Guessers see the allowed letters too, but not the topic.</li>
+                <li>Buzz in when you know the answer.</li>
+                <li>The round timer pauses while someone is guessing.</li>
+                <li>Wrong answer means you are frozen until the letters reroll.</li>
+                <li>Each speaker gets a panic button to change their prompt once per game.</li>
             </ol>
         </div>
 
         <form method="POST" action="/create">
             <h2>Create Room</h2>
             <input name="nickname" placeholder="Your nickname" required>
+
+            <label>Pick your colour</label>
+            <div class="colour-picker">
+                {% for colour in colours %}
+                <label class="colour-dot" style="background: {{ colour }}">
+                    <input type="radio" name="colour" value="{{ colour }}" {% if loop.first %}checked{% endif %}>
+                </label>
+                {% endfor %}
+            </div>
+
             <button>Create Game</button>
         </form>
 
@@ -39,6 +49,15 @@
             <h2>Join Room</h2>
             <input name="nickname" placeholder="Your nickname" required>
             <input name="room_code" placeholder="Room code" maxlength="5" required>
+
+            <label>Pick your colour</label>
+            <div class="colour-picker">
+                {% for colour in colours %}
+                <label class="colour-dot" style="background: {{ colour }}">
+                    <input type="radio" name="colour" value="{{ colour }}" {% if loop.first %}checked{% endif %}>
+                </label>
+                {% endfor %}
+            </div>
 
             <label class="spectator-check">
                 <input type="checkbox" name="spectator">

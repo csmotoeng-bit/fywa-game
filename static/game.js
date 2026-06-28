@@ -11,16 +11,20 @@ let answerTimeLeft = 0;
 let letterTimeLeft = 0;
 let countdownLeft = 3;
 let roundLive = false;
-
 let countdownActive = false;
+let lastRestartNonce = null;
 
 socket.on("game_state", data => {
     const oldRound = state?.current_round;
+    const oldNonce = state?.current?.restart_nonce;
     const oldLetters = JSON.stringify(state?.current?.letters || []);
 
     state = data;
 
-    if (state.state === "playing" && oldRound !== state.current_round) {
+    const newNonce = state?.current?.restart_nonce;
+
+    if (state.state === "playing" && (oldRound !== state.current_round || oldNonce !== newNonce)) {
+        lastRestartNonce = newNonce;
         startPreRoundCountdown();
         return;
     }
@@ -28,7 +32,6 @@ socket.on("game_state", data => {
     render();
 
     if (state.state === "playing") {
-
         const newLetters = JSON.stringify(state?.current?.letters || []);
 
         if (oldLetters !== newLetters && oldRound === state.current_round && roundLive) {
@@ -56,7 +59,7 @@ socket.on("round_reveal", reveal => {
 
     setTimeout(() => {
         socket.emit("next_round");
-    }, 4000);
+    }, 3200);
 });
 
 socket.on("game_finished", data => {
@@ -82,6 +85,7 @@ function clearAllTimers() {
     letterTimer = null;
     countdownTimer = null;
     roundLive = false;
+    countdownActive = false;
 }
 
 function soundsEnabled() {
@@ -110,31 +114,33 @@ function playBuzzerFor(playerId) {
 
 function render() {
     const game = document.getElementById("game");
+    if (!state || countdownActive) return;
 
-    if (!state) return;
-
-    if (countdownActive) return;
+    if (state.state === "voting") {
+        renderVoting();
+        return;
+    }
 
     if (state.state === "paused") {
         game.innerHTML = `
-            <div class="card reveal">
-                <div class="brand-pill">FYWA</div>
-                <h1>Paused</h1>
-                <p>The host has paused the game.</p>
-                ${hostControls()}
+            <div class="center-screen">
+                <div class="panel">
+                    <div class="brand-pill">Paused</div>
+                    <h1>Game Paused</h1>
+                    <p>The host has paused the game.</p>
+                    ${hostControls()}
+                </div>
             </div>
         `;
         return;
     }
 
-    if (state.state === "finished" || state.state === "reveal") {
-        return;
-    }
+    if (state.state === "finished" || state.state === "reveal") return;
 
     const current = state.current;
 
     if (!current) {
-        game.innerHTML = "<div class='card'><h2>Loading round...</h2></div>";
+        game.innerHTML = `<div class="center-screen"><div class="panel"><h2>Loading...</h2></div></div>`;
         return;
     }
 
@@ -147,49 +153,96 @@ function render() {
     const frozen = current.frozen.includes(you);
 
     game.innerHTML = `
-        <div class="game-grid">
-            <div class="card main-card ${buzzer ? "buzz-active" : ""}">
-                ${hostControls()}
+        <div class="game-layout">
+            <section class="play-panel ${buzzer ? "buzz-active" : ""}">
+                <div class="game-top">
+                    <div>
+                        <div class="mini-label">Turn ${state.turn_number} / ${state.settings.turn_limit}</div>
+                        <h1>${state.turn_category || current.category}</h1>
+                    </div>
 
-                <div class="round-meta">
-                    <span>Round ${state.current_round}</span>
-                    <span>${isSpectator ? "Spectating" : isSpeaker ? "You are speaking" : "You are guessing"}</span>
+                    <div class="timer-strip">
+                        <div>Round <strong id="round-count">${roundTimeLeft}</strong></div>
+                        <div>Letters <strong id="letter-count">${letterTimeLeft}</strong></div>
+                    </div>
                 </div>
 
-                <p class="label">Speaker</p>
-                <h2 class="speaker-name">${speaker ? speaker.nickname : "Unknown"}</h2>
+                <div class="speaker-strip">
+                    <div class="speaker-card">
+                        <span class="avatar big" style="background:${speaker?.colour}">${speaker?.nickname[0].toUpperCase()}</span>
+                        <div>
+                            <div class="mini-label">Speaker</div>
+                            <strong>${speaker?.nickname || "Unknown"}</strong>
+                        </div>
+                    </div>
 
-                <p class="label">Category</p>
-                <h2>${current.category}</h2>
+                    <div class="queue">
+                        ${speakerQueue()}
+                    </div>
+                </div>
 
                 ${isSpeaker ? `
-                    <p class="label">Your Topic</p>
                     <div class="topic">${current.topic}</div>
                 ` : `
-                    <p class="label">Topic</p>
-                    <div class="topic hidden-topic">Hidden</div>
+                    <div class="topic hidden-topic">Hidden Topic</div>
                 `}
 
-                <p class="label">Available Letters</p>
-                <div class="letters">
-                    ${current.letters.map(l => `<span>${l}</span>`).join("")}
-                </div>
-
-                <div class="timer-box">
-                    <div>Round <strong id="round-count">${roundTimeLeft}</strong>s</div>
-                    <div>Letters <strong id="letter-count">${letterTimeLeft}</strong>s</div>
+                <div class="letters-block">
+                    <div class="mini-label">Allowed letters — use in any order</div>
+                    <div class="letters">
+                        ${current.letters.map(l => `<span>${l}</span>`).join("")}
+                    </div>
                 </div>
 
                 ${reactionBar()}
-                ${isSpectator ? spectatorControls() : isSpeaker ? speakerControls(buzzer) : guesserControls(frozen, buzzer)}
-            </div>
 
-            <div class="card side-card">
-                <h2>Scoreboard</h2>
+                ${isSpectator ? spectatorControls() : isSpeaker ? speakerControls(buzzer, me) : guesserControls(frozen, buzzer)}
+            </section>
+
+            <aside class="score-panel">
+                ${hostControls()}
+                <h2>Scores</h2>
                 ${scoreboard()}
+            </aside>
+        </div>
+    `;
+}
+
+function renderVoting() {
+    const game = document.getElementById("game");
+    const votes = state.voting?.votes || {};
+    const options = state.voting?.options || [];
+    const myVote = votes[state.you];
+
+    game.innerHTML = `
+        <div class="center-screen">
+            <div class="panel voting-panel">
+                <div class="brand-pill">Turn ${state.turn_number + 1}</div>
+                <h1>Vote for the category</h1>
+                <p>Winning category is used for every speaker this turn.</p>
+
+                <div class="vote-grid">
+                    ${options.map(category => `
+                        <button class="${myVote === category ? "selected" : ""}" onclick="socket.emit('vote_category', {category: '${escapeJs(category)}'})">
+                            ${category}
+                            <small>${voteCount(category)} vote${voteCount(category) === 1 ? "" : "s"}</small>
+                        </button>
+                    `).join("")}
+                </div>
+
+                ${state.you === state.host_id ? `<button onclick="socket.emit('force_resolve_vote')">Start With Current Votes</button>` : ""}
             </div>
         </div>
     `;
+}
+
+function escapeJs(str) {
+    return String(str).replace(/'/g, "\\'");
+}
+
+function voteCount(category) {
+    const votes = state.voting?.votes || {};
+    return Object.values(votes).filter(v => v === category).length;
 }
 
 function hostControls() {
@@ -199,10 +252,27 @@ function hostControls() {
         <div class="host-controls">
             <button onclick="socket.emit('pause_game')">Pause</button>
             <button onclick="socket.emit('resume_game')">Resume</button>
-            <button onclick="socket.emit('force_next_round')">Next Round</button>
-            <button class="danger" onclick="socket.emit('end_game')">End Game</button>
+            <button onclick="socket.emit('force_next_round')">Skip</button>
+            <button class="danger" onclick="socket.emit('end_game')">End</button>
         </div>
     `;
+}
+
+function speakerQueue() {
+    const queue = state.speaker_queue || [];
+    const position = state.turn_speaker_position || 0;
+
+    return queue.map((pid, index) => {
+        const p = state.players.find(player => player.id === pid);
+        if (!p) return "";
+
+        return `
+            <div class="queue-item ${index === position ? "active" : ""}">
+                <span class="avatar small" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
+                <span>${index === position ? "Now" : "Next"}: ${p.nickname}</span>
+            </div>
+        `;
+    }).join("");
 }
 
 function reactionBar() {
@@ -218,47 +288,45 @@ function sendReaction(emoji) {
     socket.emit("reaction", {emoji});
 }
 
-function speakerControls(buzzer) {
+function speakerControls(buzzer, me) {
     return `
-        <div class="controls">
-            <div class="reroll-info">
-                Manual rerolls left: <strong>${state.current.manual_rerolls_left}</strong>
-            </div>
-
+        <div class="control-row">
             <button
                 ${state.current.manual_rerolls_left <= 0 ? "disabled" : ""}
                 onclick="socket.emit('reroll_letters')">
-                Manual Reroll
+                Reroll Letters (${state.current.manual_rerolls_left})
+            </button>
+
+            <button
+                ${me.panic_uses_left <= 0 || state.current.current_buzzer ? "disabled" : ""}
+                onclick="socket.emit('panic')">
+                🚨 Panic (${me.panic_uses_left})
             </button>
 
             <button class="danger" onclick="socket.emit('speaker_foul')">I Messed Up</button>
-
-            ${buzzer ? `
-                <div class="buzz-box">
-                    <h3>${buzzer.nickname} is answering</h3>
-                    <p><strong id="answer-count">${answerTimeLeft}</strong>s left</p>
-                    <button class="success" onclick="socket.emit('answer_correct', {client_time: Date.now()})">Correct</button>
-                    <button class="danger" onclick="socket.emit('answer_wrong')">Wrong</button>
-                </div>
-            ` : `<p class="waiting">Waiting for buzzers...</p>`}
         </div>
+
+        ${buzzer ? `
+            <div class="answer-box">
+                <h3>${buzzer.nickname} is answering</h3>
+                <p><strong id="answer-count">${answerTimeLeft}</strong>s left</p>
+                <button class="success" onclick="socket.emit('answer_correct', {client_time: Date.now()})">Correct</button>
+                <button class="danger" onclick="socket.emit('answer_wrong')">Wrong</button>
+            </div>
+        ` : `<p class="waiting">Describe the topic in voice chat. Waiting for buzzers...</p>`}
     `;
 }
 
 function guesserControls(frozen, buzzer) {
-    if (frozen) {
-        return `<div class="frozen">You are frozen out this round.</div>`;
-    }
+    if (frozen) return `<div class="frozen">Frozen until the letters reroll.</div>`;
 
-    if (buzzer) {
-        return `<div class="buzz-box"><h3>${buzzer.nickname} is answering...</h3></div>`;
-    }
+    if (buzzer) return `<div class="answer-box"><h3>${buzzer.nickname} is answering...</h3></div>`;
 
     return `<button class="buzz" onclick="socket.emit('buzz', {client_time: Date.now()})">BUZZ</button>`;
 }
 
 function spectatorControls() {
-    return `<div class="spectator-banner">You are watching as a spectator.</div>`;
+    return `<div class="spectator-banner">Spectator mode</div>`;
 }
 
 function scoreboard() {
@@ -268,9 +336,8 @@ function scoreboard() {
         .map(p => `
             <div class="score-row">
                 <div class="player-left">
-                    <span class="avatar" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
+                    <span class="avatar small" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
                     <span>${p.nickname}</span>
-                    ${!p.connected ? "<em>Disconnected</em>" : ""}
                 </div>
                 <strong>${state.scores[p.id]}</strong>
             </div>
@@ -289,22 +356,25 @@ function startPreRoundCountdown() {
     countdownTimer = setInterval(() => {
         if (countdownLeft > 0) {
             game.innerHTML = `
-                <div class="card countdown">
-                    <div class="brand-pill">FYWA</div>
-                    <h1>${countdownLeft}</h1>
-                    <p>Get ready...</p>
+                <div class="center-screen">
+                    <div class="panel countdown">
+                        <div class="brand-pill">Get Ready</div>
+                        <h1>${countdownLeft}</h1>
+                        <p>${state.turn_category}</p>
+                    </div>
                 </div>
             `;
-
             countdownLeft--;
         } else {
             clearInterval(countdownTimer);
             countdownTimer = null;
 
             game.innerHTML = `
-                <div class="card countdown go">
-                    <div class="brand-pill">FYWA</div>
-                    <h1>GO!</h1>
+                <div class="center-screen">
+                    <div class="panel countdown">
+                        <div class="brand-pill">Speak</div>
+                        <h1>GO!</h1>
+                    </div>
                 </div>
             `;
 
@@ -314,7 +384,7 @@ function startPreRoundCountdown() {
                 render();
                 startRoundCountdown();
                 startLetterCountdown();
-            }, 700);
+            }, 650);
         }
     }, 1000);
 }
@@ -327,6 +397,8 @@ function startRoundCountdown() {
     if (el) el.innerText = roundTimeLeft;
 
     roundTimer = setInterval(() => {
+        if (state.current?.current_buzzer) return;
+
         roundTimeLeft--;
 
         const el = document.getElementById("round-count");
@@ -369,6 +441,8 @@ function startLetterCountdown() {
     if (el) el.innerText = letterTimeLeft;
 
     letterTimer = setInterval(() => {
+        if (state.current?.current_buzzer) return;
+
         letterTimeLeft--;
 
         const el = document.getElementById("letter-count");
@@ -388,16 +462,10 @@ function showReveal(reveal) {
     playSound("reveal.wav", 0.5);
 
     setTimeout(() => {
-        if (reveal.result === "correct") {
-            playSound("correct.wav", 0.8);
-        } else if (reveal.result === "speaker_foul") {
-            playSound("foul.wav", 0.8);
-        } else {
-            playSound("wrong.wav", 0.7);
-        }
+        if (reveal.result === "correct") playSound("correct.wav", 0.8);
+        else if (reveal.result === "speaker_foul") playSound("foul.wav", 0.8);
+        else playSound("wrong.wav", 0.7);
     }, 150);
-
-    const game = document.getElementById("game");
 
     let message = "";
 
@@ -412,12 +480,14 @@ function showReveal(reveal) {
         message = "Nobody got it.";
     }
 
-    game.innerHTML = `
-        <div class="card reveal">
-            <div class="brand-pill">Answer Reveal</div>
-            <h2>${message}</h2>
-            <p>The answer was:</p>
-            <div class="topic">${reveal.topic}</div>
+    document.getElementById("game").innerHTML = `
+        <div class="center-screen">
+            <div class="panel reveal">
+                <div class="brand-pill">Answer Reveal</div>
+                <h2>${message}</h2>
+                <p>The answer was:</p>
+                <div class="topic">${reveal.topic}</div>
+            </div>
         </div>
     `;
 }
@@ -430,53 +500,37 @@ function showFinalResults(data) {
     const sorted = players.sort((a, b) => data.scores[b.id] - data.scores[a.id]);
     const winner = sorted[0];
 
-    let mostBuzzes = sorted.reduce((best, p) => {
-        return (data.stats[p.id].buzzes || 0) > (data.stats[best.id].buzzes || 0) ? p : best;
-    }, sorted[0]);
+    document.getElementById("game").innerHTML = `
+        <div class="center-screen scroll-safe">
+            <div class="panel final-card">
+                <div class="brand-pill">Game Over</div>
+                <h1>🏆 ${winner.nickname} wins!</h1>
 
-    let mostFrozen = sorted.reduce((best, p) => {
-        return (data.stats[p.id].frozen || 0) > (data.stats[best.id].frozen || 0) ? p : best;
-    }, sorted[0]);
-
-    const game = document.getElementById("game");
-
-    game.innerHTML = `
-        <div class="card reveal final-card">
-            <div class="brand-pill">Game Over</div>
-            <h1>🏆 ${winner.nickname} wins!</h1>
-
-            <h2>Final Scores</h2>
-            ${sorted.map(p => `
-                <div class="score-row">
-                    <div class="player-left">
-                        <span class="avatar" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
-                        <span>${p.nickname}</span>
+                <h2>Final Scores</h2>
+                ${sorted.map(p => `
+                    <div class="score-row">
+                        <div class="player-left">
+                            <span class="avatar small" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
+                            <span>${p.nickname}</span>
+                        </div>
+                        <strong>${data.scores[p.id]}</strong>
                     </div>
-                    <strong>${data.scores[p.id]}</strong>
-                </div>
-            `).join("")}
+                `).join("")}
 
-            <h2>Awards</h2>
-            <div class="award-grid">
-                <div class="award">🔊 Most Buzzes<br><strong>${mostBuzzes.nickname}</strong></div>
-                <div class="award">🥶 Most Frozen<br><strong>${mostFrozen.nickname}</strong></div>
+                <h2>Stats</h2>
+                ${sorted.map(p => `
+                    <div class="stat-row">
+                        <strong>${p.nickname}</strong>
+                        <span>Correct: ${data.stats[p.id].correct || 0}</span>
+                        <span>Speaker success: ${data.stats[p.id].speaker_success || 0}</span>
+                        <span>Panics: ${data.stats[p.id].panics || 0}</span>
+                        <span>Frozen: ${data.stats[p.id].frozen || 0}</span>
+                        <span>Buzzes: ${data.stats[p.id].buzzes || 0}</span>
+                    </div>
+                `).join("")}
+
+                <a href="/" class="button-link">New Game</a>
             </div>
-
-            <h2>End Game Stats</h2>
-            ${sorted.map(p => `
-                <div class="stat-row">
-                    <strong>${p.nickname}</strong>
-                    <span>Correct guesses: ${data.stats[p.id].correct || 0}</span>
-                    <span>Successful speaker rounds: ${data.stats[p.id].speaker_success || 0}</span>
-                    <span>Speaker fouls: ${data.stats[p.id].fouls || 0}</span>
-                    <span>Frozen out: ${data.stats[p.id].frozen || 0}</span>
-                    <span>Buzzes: ${data.stats[p.id].buzzes || 0}</span>
-                    <span>Timeouts as speaker: ${data.stats[p.id].timeouts || 0}</span>
-                    <span>Fastest guess: ${data.stats[p.id].fastest_guess ? data.stats[p.id].fastest_guess + "s" : "N/A"}</span>
-                </div>
-            `).join("")}
-
-            <a href="/" class="button-link">New Game</a>
         </div>
     `;
 }
@@ -487,7 +541,6 @@ function showToast(message) {
     toast.className = "toast";
     toast.innerText = message;
     area.appendChild(toast);
-
     setTimeout(() => toast.remove(), 2500);
 }
 
@@ -499,6 +552,5 @@ function showReaction(data) {
     item.style.borderColor = data.colour;
     item.innerHTML = `<span>${data.emoji}</span><small>${data.nickname}</small>`;
     layer.appendChild(item);
-
     setTimeout(() => item.remove(), 1800);
 }

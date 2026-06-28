@@ -16,50 +16,74 @@
 
         <div class="room-code-box">
             <div class="room-code" id="room-code">{{ room_code }}</div>
-            <button onclick="copyRoomCode()">Copy Code</button>
+            <button onclick="copyRoomCode()">Copy</button>
         </div>
     </div>
 
     <div id="toast-area"></div>
 
-    <div class="grid">
+    <div class="lobby-grid">
         <div class="card">
             <h2>Players</h2>
             <div id="players"></div>
         </div>
 
         <div class="card" id="host-settings">
-            <h2>Host Settings</h2>
+            <h2>Game Setup</h2>
 
-            <label>Round Limit</label>
-            <input id="round_limit" type="number" value="20">
+            <div class="settings-grid">
+                <div>
+                    <label>Turns</label>
+                    <input id="turn_limit" type="number" value="3">
+                </div>
 
-            <label>Target Score</label>
-            <input id="target_score" type="number" value="10">
+                <div>
+                    <label>Target Score</label>
+                    <input id="target_score" type="number" value="20">
+                </div>
 
-            <label>Round Timer</label>
-            <input id="round_timer" type="number" value="60">
+                <div>
+                    <label>Round Timer</label>
+                    <input id="round_timer" type="number" value="60">
+                </div>
 
-            <label>Letter Reroll Seconds</label>
-            <input id="letter_reroll_seconds" type="number" value="15">
+                <div>
+                    <label>Answer Timer</label>
+                    <input id="answer_timer" type="number" value="10">
+                </div>
+
+                <div>
+                    <label>Letter Reroll</label>
+                    <input id="letter_reroll_seconds" type="number" value="20">
+                </div>
+
+                <div>
+                    <label>Panic Uses</label>
+                    <input id="panic_uses" type="number" value="1">
+                </div>
+            </div>
+
+            <label class="check">
+                <input type="checkbox" id="speaker_scores" checked>
+                Speaker scores when guessed correctly
+            </label>
 
             <h3>Card Packs</h3>
             <div id="packs" class="categories"></div>
 
-            <h3>Sound Settings</h3>
+            <h3>Sound</h3>
             <label class="check">
                 <input type="checkbox" id="sound_enabled" checked>
                 Sound enabled
             </label>
 
-            <label>Volume</label>
             <input id="volume" type="range" min="0" max="1" step="0.05" value="0.6">
 
             <h3>Upload CSV Pack</h3>
-            <p class="hint">CSV must use headers: Category,Topic</p>
+            <p class="hint">CSV headers: Category,Topic</p>
             <input id="pack_name" placeholder="Pack name">
             <input id="pack_file" type="file" accept=".csv">
-            <button onclick="uploadPack()">Upload Pack</button>
+            <button onclick="uploadPack()">Upload</button>
 
             <hr>
 
@@ -135,10 +159,13 @@ function saveSettings() {
     const packs = Array.from(document.querySelectorAll(".pack:checked")).map(c => c.value);
 
     socket.emit("update_settings", {
-        round_limit: document.getElementById("round_limit").value,
+        turn_limit: document.getElementById("turn_limit").value,
         target_score: document.getElementById("target_score").value,
         round_timer: document.getElementById("round_timer").value,
+        answer_timer: document.getElementById("answer_timer").value,
         letter_reroll_seconds: document.getElementById("letter_reroll_seconds").value,
+        panic_uses: document.getElementById("panic_uses").value,
+        speaker_scores: document.getElementById("speaker_scores").checked,
         packs: packs,
         sound_enabled: document.getElementById("sound_enabled").checked,
         volume: document.getElementById("volume").value

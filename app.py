@@ -5,6 +5,7 @@ import re
 import string
 import time
 import uuid
+from collections import Counter
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_socketio import SocketIO, join_room
 
@@ -30,14 +31,9 @@ BUZZER_SOUNDS = [
 ]
 
 PLAYER_COLOURS = [
-    "#00b7ff",
-    "#8b5cf6",
-    "#ff3d8b",
-    "#22c55e",
-    "#f97316",
-    "#14b8a6",
-    "#f43f5e",
-    "#a3e635",
+    "#3b82f6", "#22c55e", "#ef4444", "#f97316",
+    "#a855f7", "#ec4899", "#06b6d4", "#eab308",
+    "#111827", "#f8fafc"
 ]
 
 EMOJIS = ["😂", "😡", "👏", "🤯", "💀", "👀"]
@@ -59,9 +55,7 @@ def cleanup_rooms():
     for code, room in rooms.items():
         age = current_time - room.get("created_at", current_time)
         inactive = current_time - room.get("updated_at", current_time)
-
-        players = room.get("players", {})
-        anyone_connected = any(p.get("connected", False) for p in players.values())
+        anyone_connected = any(p.get("connected", False) for p in room.get("players", {}).values())
 
         if age > ROOM_MAX_AGE_SECONDS:
             to_delete.append(code)
@@ -78,6 +72,14 @@ def safe_pack_name(name):
     return name[:40] or "custom_pack"
 
 
+def validate_colour(colour):
+    if colour in PLAYER_COLOURS:
+        return colour
+    if re.fullmatch(r"#[0-9a-fA-F]{6}", colour or ""):
+        return colour
+    return PLAYER_COLOURS[0]
+
+
 def validate_csv_pack(file_storage):
     try:
         file_storage.stream.seek(0)
@@ -90,8 +92,8 @@ def validate_csv_pack(file_storage):
 
         reader = csv.DictReader(lines)
         headers = reader.fieldnames or []
-
         normalised = [h.strip().lower() for h in headers]
+
         if "category" not in normalised or "topic" not in normalised:
             return False, "CSV must contain headers: Category,Topic"
 
@@ -146,6 +148,21 @@ def load_packs():
     return packs
 
 
+def all_categories_for_packs(pack_ids):
+    packs = load_packs()
+    categories = set()
+
+    for pack_id in pack_ids:
+        pack = packs.get(pack_id)
+        if not pack:
+            continue
+
+        for card in pack["cards"]:
+            categories.add(card["category"])
+
+    return sorted(categories)
+
+
 def make_room_code():
     cleanup_rooms()
 
@@ -171,6 +188,7 @@ def default_stats():
         "timeouts": 0,
         "buzzes": 0,
         "frozen": 0,
+        "panics": 0,
         "fastest_guess": None,
     }
 
@@ -183,7 +201,15 @@ def player_public(player):
         "colour": player["colour"],
         "connected": player.get("connected", True),
         "spectator": player.get("spectator", False),
+        "panic_uses_left": player.get("panic_uses_left", 0),
     }
+
+
+def active_player_ids(room):
+    return [
+        pid for pid, p in room["players"].items()
+        if not p.get("spectator", False)
+    ]
 
 
 def public_room(room_code):
@@ -197,33 +223,16 @@ def public_room(room_code):
         "scores": room["scores"],
         "state": room["state"],
         "current_round": room["current_round"],
+        "turn_number": room["turn_number"],
+        "turn_speaker_position": room["turn_speaker_position"],
+        "turn_category": room.get("turn_category"),
+        "speaker_queue": room.get("speaker_queue", []),
+        "voting": room.get("voting", {}),
         "packs": [
-            {
-                "id": pack["id"],
-                "name": pack["name"],
-                "count": pack["count"],
-            }
+            {"id": pack["id"], "name": pack["name"], "count": pack["count"]}
             for pack in load_packs().values()
         ],
     }
-
-
-def active_player_ids(room):
-    return [
-        pid for pid, p in room["players"].items()
-        if not p.get("spectator", False)
-    ]
-
-
-def next_speaker(room_code):
-    room = rooms[room_code]
-    player_ids = active_player_ids(room)
-
-    if not player_ids:
-        return None
-
-    room["speaker_index"] = (room["speaker_index"] + 1) % len(player_ids)
-    return player_ids[room["speaker_index"]]
 
 
 def emit_game_state(room_code):
@@ -248,41 +257,111 @@ def emit_game_state(room_code):
         socketio.emit("game_state", payload, room=sid)
 
 
-def get_available_cards(room):
+def get_cards_for_category(room, category):
     packs = load_packs()
     selected_pack_ids = room["settings"].get("packs", [])
     cards = []
 
     for pack_id in selected_pack_ids:
         pack = packs.get(pack_id)
-        if pack:
-            cards.extend(pack["cards"])
+        if not pack:
+            continue
 
-    if not cards:
-        for pack in packs.values():
-            cards.extend(pack["cards"])
+        for card in pack["cards"]:
+            if card["category"] == category:
+                cards.append(card)
 
     return cards
 
 
+def get_available_categories(room):
+    categories = all_categories_for_packs(room["settings"].get("packs", []))
+    return categories
+
+
+def build_speaker_queue(room):
+    room["speaker_queue"] = active_player_ids(room)
+    room["turn_speaker_position"] = 0
+
+
+def begin_voting(room_code):
+    room = rooms[room_code]
+    categories = get_available_categories(room)
+
+    if not categories:
+        return
+
+    option_count = min(int(room["settings"].get("vote_option_count", 5)), len(categories))
+    vote_options = random.sample(categories, option_count)
+
+    room["state"] = "voting"
+    room["current"] = None
+    room["turn_category"] = None
+    room["voting"] = {
+        "options": vote_options,
+        "votes": {},
+        "resolved": False,
+    }
+
+    emit_game_state(room_code)
+
+
+def resolve_vote(room_code):
+    room = rooms[room_code]
+    voting = room["voting"]
+    votes = voting["votes"]
+
+    if not votes:
+        chosen = random.choice(voting["options"])
+    else:
+        counts = Counter(votes.values())
+        highest = max(counts.values())
+        tied = [category for category, count in counts.items() if count == highest]
+        chosen = random.choice(tied)
+
+    room["turn_category"] = chosen
+    room["turn_number"] += 1
+    build_speaker_queue(room)
+    room["voting"]["resolved"] = True
+
+    socketio.emit("toast", {
+        "message": f"Category selected: {chosen}",
+        "type": "info"
+    }, room=room_code)
+
+    start_round(room_code)
+
+
 def start_round(room_code):
     room = rooms[room_code]
-    cards = get_available_cards(room)
+    category = room.get("turn_category")
+
+    if not category:
+        begin_voting(room_code)
+        return
+
+    if room["turn_speaker_position"] >= len(room["speaker_queue"]):
+        if room["turn_number"] >= int(room["settings"]["turn_limit"]):
+            finish_game(room_code)
+            return
+
+        begin_voting(room_code)
+        return
+
+    speaker_id = room["speaker_queue"][room["turn_speaker_position"]]
+    cards = get_cards_for_category(room, category)
 
     if not cards:
+        begin_voting(room_code)
         return
 
     card = random.choice(cards)
-    speaker_id = next_speaker(room_code)
-
-    if not speaker_id:
-        return
 
     room["state"] = "playing"
     room["current_round"] += 1
     room["current"] = {
         "speaker_id": speaker_id,
-        "category": card["category"],
+        "category": category,
         "topic": card["topic"],
         "letters": make_letters(),
         "frozen": [],
@@ -290,6 +369,7 @@ def start_round(room_code):
         "answer_deadline_active": False,
         "manual_rerolls_left": 1,
         "buzz_started_at": None,
+        "restart_nonce": str(uuid.uuid4()),
     }
 
     emit_game_state(room_code)
@@ -314,9 +394,12 @@ def end_round(room_code, result, winner_id=None, answer_time=None):
 
     if result == "correct" and winner_id:
         room["scores"][winner_id] += 1
-        room["scores"][current["speaker_id"]] += 1
+
+        if room["settings"].get("speaker_scores", True):
+            room["scores"][current["speaker_id"]] += 1
+            room["stats"][current["speaker_id"]]["speaker_success"] += 1
+
         room["stats"][winner_id]["correct"] += 1
-        room["stats"][current["speaker_id"]]["speaker_success"] += 1
 
         if answer_time is not None:
             fastest = room["stats"][winner_id]["fastest_guess"]
@@ -340,26 +423,22 @@ def end_round(room_code, result, winner_id=None, answer_time=None):
     }
 
     room["last_reveal"] = reveal
+    room["turn_speaker_position"] += 1
 
-    target_score = int(room["settings"]["target_score"])
-    round_limit = int(room["settings"]["round_limit"])
-
-    if result != "forced" and (
-        max(room["scores"].values(), default=0) >= target_score
-        or room["current_round"] >= round_limit
-    ):
+    if max(room["scores"].values(), default=0) >= int(room["settings"]["target_score"]):
         finish_game(room_code)
-    else:
-        room["state"] = "reveal"
-        room["current"] = None
-        emit_game_state(room_code)
-        socketio.emit("round_reveal", reveal, room=room_code)
+        return
+
+    room["state"] = "reveal"
+    room["current"] = None
+    emit_game_state(room_code)
+    socketio.emit("round_reveal", reveal, room=room_code)
 
 
 @app.route("/")
 def index():
     cleanup_rooms()
-    return render_template("index.html")
+    return render_template("index.html", colours=PLAYER_COLOURS)
 
 
 @app.route("/create", methods=["POST"])
@@ -367,6 +446,7 @@ def create():
     cleanup_rooms()
 
     nickname = request.form["nickname"].strip()
+    colour = validate_colour(request.form.get("colour", PLAYER_COLOURS[0]))
 
     if not nickname:
         return render_template("error.html", message="Please enter a nickname.")
@@ -392,24 +472,32 @@ def create():
                 "token": player_token,
                 "nickname": nickname,
                 "buzzer": BUZZER_SOUNDS[0],
-                "colour": PLAYER_COLOURS[0],
+                "colour": colour,
                 "connected": True,
                 "spectator": False,
+                "panic_uses_left": 1,
             }
         },
         "scores": {player_id: 0},
         "stats": {player_id: default_stats()},
         "settings": {
-            "round_limit": 20,
-            "target_score": 10,
+            "turn_limit": 3,
+            "target_score": 20,
             "round_timer": 60,
             "answer_timer": 10,
-            "letter_reroll_seconds": 15,
+            "letter_reroll_seconds": 20,
             "packs": list(packs.keys()),
             "sound_enabled": True,
             "volume": 0.6,
+            "panic_uses": 1,
+            "speaker_scores": True,
+            "vote_option_count": 5,
         },
-        "speaker_index": -1,
+        "speaker_queue": [],
+        "turn_number": 0,
+        "turn_speaker_position": 0,
+        "turn_category": None,
+        "voting": {},
         "current_round": 0,
         "state": "lobby",
         "current": None,
@@ -427,6 +515,7 @@ def join():
 
     nickname = request.form["nickname"].strip()
     room_code = request.form["room_code"].strip().upper()
+    colour = validate_colour(request.form.get("colour", PLAYER_COLOURS[0]))
     spectator = request.form.get("spectator") == "on"
 
     if not nickname:
@@ -440,7 +529,7 @@ def join():
 
     room = rooms[room_code]
 
-    if room["state"] not in ["lobby", "playing", "paused", "reveal"]:
+    if room["state"] == "finished":
         return render_template("error.html", message="This game has already finished.")
 
     player_id = str(uuid.uuid4())
@@ -457,9 +546,10 @@ def join():
         "token": player_token,
         "nickname": nickname,
         "buzzer": BUZZER_SOUNDS[player_index % len(BUZZER_SOUNDS)],
-        "colour": PLAYER_COLOURS[player_index % len(PLAYER_COLOURS)],
+        "colour": colour,
         "connected": True,
         "spectator": spectator,
+        "panic_uses_left": int(room["settings"].get("panic_uses", 1)),
     }
 
     if not spectator:
@@ -574,15 +664,22 @@ def update_settings(data):
     selected_packs = data.get("packs") or list(load_packs().keys())
 
     room["settings"] = {
-        "round_limit": int(data.get("round_limit", 20)),
-        "target_score": int(data.get("target_score", 10)),
+        "turn_limit": int(data.get("turn_limit", 3)),
+        "target_score": int(data.get("target_score", 20)),
         "round_timer": int(data.get("round_timer", 60)),
-        "answer_timer": 10,
-        "letter_reroll_seconds": int(data.get("letter_reroll_seconds", 15)),
+        "answer_timer": int(data.get("answer_timer", 10)),
+        "letter_reroll_seconds": int(data.get("letter_reroll_seconds", 20)),
         "packs": selected_packs,
         "sound_enabled": bool(data.get("sound_enabled", True)),
         "volume": float(data.get("volume", 0.6)),
+        "panic_uses": int(data.get("panic_uses", 1)),
+        "speaker_scores": bool(data.get("speaker_scores", True)),
+        "vote_option_count": int(data.get("vote_option_count", 5)),
     }
+
+    for p in room["players"].values():
+        if not p.get("spectator", False):
+            p["panic_uses_left"] = int(room["settings"]["panic_uses"])
 
     emit_game_state(room_code)
 
@@ -601,7 +698,46 @@ def on_start_game():
         return
 
     socketio.emit("go_to_game", {"room_code": room_code}, room=room_code)
-    start_round(room_code)
+    begin_voting(room_code)
+
+
+@socketio.on("vote_category")
+def vote_category(data):
+    room_code = session.get("room_code")
+    player_id = session.get("player_id")
+    room = rooms.get(room_code)
+
+    if not room or room["state"] != "voting":
+        return
+
+    if player_id not in active_player_ids(room):
+        return
+
+    category = data.get("category")
+    if category not in room["voting"]["options"]:
+        return
+
+    room["voting"]["votes"][player_id] = category
+
+    socketio.emit("toast", {
+        "message": f"{room['players'][player_id]['nickname']} voted.",
+        "type": "info"
+    }, room=room_code)
+
+    if len(room["voting"]["votes"]) >= len(active_player_ids(room)):
+        resolve_vote(room_code)
+    else:
+        emit_game_state(room_code)
+
+
+@socketio.on("force_resolve_vote")
+def force_resolve_vote():
+    room_code = session.get("room_code")
+    player_id = session.get("player_id")
+    room = rooms.get(room_code)
+
+    if room and room["host_id"] == player_id and room["state"] == "voting":
+        resolve_vote(room_code)
 
 
 @socketio.on("buzz")
@@ -651,10 +787,6 @@ def answer_wrong():
     if buzzer:
         current["frozen"].append(buzzer)
         room["stats"][buzzer]["frozen"] += 1
-        socketio.emit("toast", {
-            "message": f"{room['players'][buzzer]['nickname']} is frozen out.",
-            "type": "wrong"
-        }, room=room_code)
 
     current["current_buzzer"] = None
     current["answer_deadline_active"] = False
@@ -747,7 +879,7 @@ def reroll_letters():
     current["answer_deadline_active"] = False
     current["buzz_started_at"] = None
 
-    socketio.emit("toast", {"message": "Letters rerolled! Everyone is back in.", "type": "info"}, room=room_code)
+    socketio.emit("toast", {"message": "Letters rerolled. Everyone is back in.", "type": "info"}, room=room_code)
     emit_game_state(room_code)
 
 
@@ -766,7 +898,52 @@ def auto_reroll_letters():
     current["answer_deadline_active"] = False
     current["buzz_started_at"] = None
 
-    socketio.emit("toast", {"message": "Letters rerolled! Everyone is back in.", "type": "info"}, room=room_code)
+    socketio.emit("toast", {"message": "Letters rerolled. Everyone is back in.", "type": "info"}, room=room_code)
+    emit_game_state(room_code)
+
+
+@socketio.on("panic")
+def panic():
+    room_code = session.get("room_code")
+    player_id = session.get("player_id")
+    room = rooms.get(room_code)
+
+    if not room or room["state"] != "playing":
+        return
+
+    current = room["current"]
+    player = room["players"].get(player_id)
+
+    if not player or player_id != current["speaker_id"]:
+        return
+
+    if player.get("panic_uses_left", 0) <= 0:
+        return
+
+    if current["current_buzzer"]:
+        return
+
+    cards = get_cards_for_category(room, current["category"])
+    if not cards:
+        return
+
+    player["panic_uses_left"] -= 1
+    room["stats"][player_id]["panics"] += 1
+
+    new_card = random.choice(cards)
+    current["topic"] = new_card["topic"]
+    current["letters"] = make_letters()
+    current["frozen"] = []
+    current["current_buzzer"] = None
+    current["answer_deadline_active"] = False
+    current["buzz_started_at"] = None
+    current["restart_nonce"] = str(uuid.uuid4())
+
+    socketio.emit("toast", {
+        "message": f"{player['nickname']} hit the panic button.",
+        "type": "info"
+    }, room=room_code)
+
     emit_game_state(room_code)
 
 
