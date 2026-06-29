@@ -74,7 +74,7 @@ socket.on("game_finished", data => {
 });
 
 socket.on("go_to_lobby", data => {
-    window.location.href = "/lobby/" + data.room_code;
+    window.location.href = "/fyoa/lobby/" + data.room_code;
 });
 
 socket.on("toast", data => {
@@ -648,7 +648,7 @@ function showFinalResults(data) {
                     : ""
                 }
 
-                <a href="/" class="button-link">New Game</a>
+                <a href="/fyoa" class="button-link">New Game</a>
             </div>
         </div>
     `;

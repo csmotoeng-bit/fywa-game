@@ -128,11 +128,11 @@ socket.on("game_state", data => {
 });
 
 socket.on("go_to_game", data => {
-    window.location.href = "/game/" + data.room_code;
+    window.location.href = "/fyoa/game/" + data.room_code;
 });
 
 socket.on("go_to_lobby", data => {
-    window.location.href = "/lobby/" + data.room_code;
+    window.location.href = "/fyoa/lobby/" + data.room_code;
 });
 
 socket.on("toast", data => {
