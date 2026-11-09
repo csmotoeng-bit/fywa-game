@@ -76,7 +76,10 @@ def start_party(code):
             exclusive = list(set(CLUELESS_EXTREME_WORDS) - set(CLUELESS_WORDS))
             if len(exclusive) < 15:
                 return "Extreme mode needs at least 15 unique extreme words."
-            words = _rng.sample(exclusive, 15) + _rng.sample(CLUELESS_WORDS, 10)
+            normal_single_words = [word for word in CLUELESS_WORDS if len(word.split()) == 1]
+            if len(normal_single_words) < 10:
+                return "Extreme mode needs at least ten one-word standard cards."
+            words = _rng.sample(exclusive, 15) + _rng.sample(normal_single_words, 10)
             _rng.shuffle(words)
         else:
             words = _rng.sample(CLUELESS_WORDS, 25)
