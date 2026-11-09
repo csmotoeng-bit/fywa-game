@@ -1,37 +1,80 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <title>FYWA Party Games</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FYWA — Game Night</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-<div class="page center">
-    <div class="hub-card">
-        <div class="brand-pill">FYWA Party Games</div>
-        <h1>Party games designed to ruin friendships.</h1>
-        <p class="subtitle">Pick a game, join with a room code, and start arguing.</p>
-
-        <div class="game-card-grid">
-            <a class="game-launch-card active-game" href="/fyoa">
-                <div class="game-icon">🎤</div>
-                <div>
-                    <h2>F*ck You On About?</h2>
-                    <p>Describe ridiculous topics using limited letters while your mates buzz in.</p>
-                    <span class="play-pill">Play Now</span>
-                </div>
-            </a>
-
-            <a class="game-launch-card disabled-game" href="/typical">
-                <div class="game-icon">🤣</div>
-                <div>
-                    <h2>F*cking Typical</h2>
-                    <p>CAH meets Quiplash. Player-name prompts, typed answers, brutal reveals.</p>
-                    <span class="coming-pill">Coming Soon</span>
-                </div>
-            </a>
-        </div>
-    </div>
-</div>
+<body class="fywa-body">
+  <div class="fywa-container fywa-home" data-entry="host">
+    <header class="fywa-hero">
+      <div class="fywa-eyebrow">F*CK YOU WITH ANYTHING • THE PARTY HUB</div>
+      <h1>GAME NIGHT.<span>NO MERCY.</span></h1>
+      <p>One lobby. All your mates. Four games designed to ruin friendships. No accounts, no downloads, just a room code.</p>
+    </header>
+    <nav class="fywa-entry-tabs" aria-label="Choose how to enter"><button type="button" class="fywa-entry-tab active" data-entry-tab="host" aria-pressed="true">HOST</button><button type="button" class="fywa-entry-tab" data-entry-tab="join" aria-pressed="false">JOIN</button></nav>
+    <section class="fywa-entry-grid">
+      <form class="fywa-panel" action="{{ url_for('hub.create_room') }}" method="post" id="create-form">
+        <div class="fywa-panel-label">01 / START SOMETHING</div>
+        <h2>Host a room</h2>
+        <label for="create-name">Your nickname</label>
+        <input id="create-name" name="nickname" maxlength="24" placeholder="What shall we call you?" required autocomplete="nickname">
+        <label>Pick a colour</label>
+        <div class="fywa-colours" data-colours="create"></div>
+        <button class="fywa-button fywa-primary" type="submit">CREATE ROOM <span>↗</span></button>
+      </form>
+      <form class="fywa-panel" action="{{ url_for('hub.join_room_form') }}" method="post" id="join-form">
+        <div class="fywa-panel-label">02 / GET INVOLVED</div>
+        <h2>Join the chaos</h2>
+        <label for="join-name">Your nickname</label>
+        <input id="join-name" name="nickname" maxlength="24" placeholder="Choose a name" required autocomplete="nickname">
+        <label for="join-code">Room code</label>
+        <input id="join-code" name="room_code" class="fywa-code-input" maxlength="5" placeholder="ABCDE" required autocomplete="off">
+        <label class="fywa-inline-checkbox"><input type="checkbox" name="spectator"> Join as spectator</label>
+        <label>Pick a colour</label>
+        <div class="fywa-colours" data-colours="join"></div>
+        <button class="fywa-button fywa-primary" type="submit">JOIN ROOM <span>↗</span></button>
+      </form>
+    </section>
+    <section class="fywa-games-section">
+      <div class="fywa-section-heading"><span>THE COLLECTION</span><span>04 GAMES / 01 LOBBY</span></div>
+      <div class="fywa-game-cards">
+        {% for key, game in games.items() %}
+        <div class="fywa-game-card"><div class="fywa-game-icon">{{ game.icon }}</div><div class="fywa-game-short">{{ game.short }}</div><h3>{{ game.name }}</h3><p>{{ game.tag }}</p></div>
+        {% endfor %}
+      </div>
+    </section>
+    <footer class="fywa-footer">FYWA • Best played with Discord, terrible judgement and people you trust far too much.</footer>
+  </div>
+  <script>
+    document.querySelectorAll('[data-entry-tab]').forEach(b => b.addEventListener('click', () => {
+      document.querySelector('.fywa-home').dataset.entry = b.dataset.entryTab;
+      document.querySelectorAll('[data-entry-tab]').forEach(tab => {tab.classList.toggle('active', tab===b);tab.setAttribute('aria-pressed',String(tab===b));});
+    }));
+    const palette = {{ ['#3b82f6','#22c55e','#ef4444','#f97316','#a855f7','#ec4899','#06b6d4','#eab308','#10b981','#f43f5e','#8b5cf6','#f59e0b','#14b8a6','#84cc16','#6366f1','#d946ef']|tojson }};
+    const savedName = localStorage.getItem('fywa_nickname') || '';
+    const savedColour = localStorage.getItem('fywa_colour') || palette[0];
+    document.querySelectorAll('input[name=nickname]').forEach(el => el.value = savedName);
+    document.querySelectorAll('[data-colours]').forEach(container => {
+      const form = container.closest('form');
+      palette.forEach((colour, i) => {
+        const label = document.createElement('label');
+        label.className = 'fywa-colour-option';
+        label.title = colour;
+        const radio = document.createElement('input');
+        radio.type = 'radio'; radio.name = 'colour'; radio.value = colour;
+        radio.checked = colour === savedColour || (i === 0 && !palette.includes(savedColour));
+        const chip = document.createElement('span'); chip.style.background = colour;
+        label.append(radio, chip); container.append(label);
+      });
+      form.addEventListener('submit', () => {
+        localStorage.setItem('fywa_nickname', form.querySelector('input[name=nickname]').value.trim());
+        localStorage.setItem('fywa_colour', form.querySelector('input[name=colour]:checked')?.value || palette[0]);
+      });
+    });
+    const code = new URLSearchParams(location.search).get('join');
+    if (code) { document.getElementById('join-code').value = code.toUpperCase().slice(0,5); document.querySelector('[data-entry-tab=join]')?.click(); document.getElementById('join-code').focus(); }
+  </script>
 </body>
 </html>

@@ -4,13 +4,15 @@
     <title>F*ck You On About?</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 </head>
 <body>
 <div class="game-shell">
     <div id="toast-area"></div>
     <div id="reaction-layer"></div>
+    <div class="fyoa-nav"><a href="/room/{{ room_code }}">← FYWA LOBBY</a><button id="fyoa-score-toggle" type="button" onclick="toggleFyoaScores()" aria-expanded="false">☰ SCORES & HOST CONTROLS</button></div>
     <div id="game"></div>
+    <div id="fyoa-scores-overlay" class="fyoa-scores-overlay" hidden><section class="fyoa-scores-card"><div class="fyoa-scores-title"><strong>SCORES & CONTROLS</strong><button type="button" onclick="toggleFyoaScores(false)">✕ CLOSE</button></div><div id="fyoa-scores-content"></div></section></div>
 </div>
 
 <script src="/static/fyoa/game.js"></script>

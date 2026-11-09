@@ -1,4 +1,5 @@
 const socket = io();
+socket.emit("fyoa_join_socket");
 
 let state = null;
 let roundTimer = null;
@@ -37,6 +38,7 @@ socket.on("game_state", data => {
     }
 
     render();
+    refreshFyoaScores();
 
     if (state.state === "playing") {
         const newLetters = JSON.stringify(state?.current?.letters || []);
@@ -123,6 +125,16 @@ function playBuzzerFor(playerId) {
     playSound(player?.buzzer || "buzzer_1.wav", 1);
 }
 
+function safeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+}
+
+function voteCategory(category) {
+    socket.emit("vote_category", {category});
+}
+
 function render() {
     const game = document.getElementById("game");
     if (!state || countdownActive) return;
@@ -192,10 +204,10 @@ function render() {
 
                 <div class="speaker-strip">
                     <div class="speaker-card">
-                        <span class="avatar big" style="background:${speaker?.colour}">${speaker?.nickname[0].toUpperCase()}</span>
+                        <span class="avatar big" style="background:${speaker?.colour}">${safeHtml(speaker?.nickname[0].toUpperCase())}</span>
                         <div>
                             <div class="mini-label">Speaker</div>
-                            <strong>${speaker?.nickname || "Unknown"}</strong>
+                            <strong>${safeHtml(speaker?.nickname || "Unknown")}</strong>
                         </div>
                     </div>
 
@@ -205,7 +217,7 @@ function render() {
                 </div>
 
                 ${isSpeaker ? `
-                    <div class="topic">${current.topic}</div>
+                    <div class="topic">${safeHtml(current.topic)}</div>
                 ` : `
                     <div class="topic hidden-topic">Hidden Topic</div>
                 `}
@@ -246,8 +258,8 @@ function renderVoting() {
 
                 <div class="vote-grid">
                     ${options.map(category => `
-                        <button class="${myVote === category ? "selected" : ""}" onclick="socket.emit('vote_category', {category: '${escapeJs(category)}'})">
-                            ${category}
+                        <button class="${myVote === category ? "selected" : ""}" onclick="voteCategory(${safeHtml(JSON.stringify(category))})">
+                            ${safeHtml(category)}
                             <small>${voteCount(category)} vote${voteCount(category) === 1 ? "" : "s"}</small>
                         </button>
                     `).join("")}
@@ -269,7 +281,7 @@ function voteCount(category) {
 }
 
 function hostControls() {
-    if (!state || state.you !== state.host_id) return "";
+    if (!state || state.is_host !== true) return "";
 
     return `
         <div class="host-controls">
@@ -295,8 +307,8 @@ function speakerQueue() {
 
         return `
             <div class="queue-item ${index === position ? "active" : ""}">
-                <span class="avatar small" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
-                <span>${index === position ? "Now" : "Next"}: ${p.nickname}</span>
+                <span class="avatar small" style="background:${p.colour}">${safeHtml(p.nickname[0].toUpperCase())}</span>
+                <span>${index === position ? "Now" : "Next"}: ${safeHtml(p.nickname)}</span>
             </div>
         `;
     }).join("");
@@ -341,7 +353,7 @@ function speakerControls(buzzer, me) {
 
         ${buzzer ? `
             <div class="answer-box">
-                <h3>${buzzer.nickname} is answering</h3>
+                <h3>${safeHtml(buzzer.nickname)} is answering</h3>
                 <p><strong id="answer-count">${answerTimeLeft}</strong>s left</p>
                 <button class="success" onclick="socket.emit('answer_correct', {client_time: Date.now()})">Correct</button>
                 <button class="danger" onclick="socket.emit('answer_wrong')">Wrong</button>
@@ -353,7 +365,7 @@ function speakerControls(buzzer, me) {
 function guesserControls(frozen, buzzer) {
     if (frozen) return `<div class="frozen">Frozen until the letters reroll.</div>`;
 
-    if (buzzer) return `<div class="answer-box"><h3>${buzzer.nickname} is answering...</h3></div>`;
+    if (buzzer) return `<div class="answer-box"><h3>${safeHtml(buzzer.nickname)} is answering...</h3></div>`;
 
     return `<button class="buzz" onclick="socket.emit('buzz', {client_time: Date.now()})">BUZZ</button>`;
 }
@@ -369,8 +381,8 @@ function scoreboard() {
         .map(p => `
             <div class="score-row">
                 <div class="player-left">
-                    <span class="avatar small" style="background:${p.colour}">${p.nickname[0].toUpperCase()}</span>
-                    <span>${p.nickname}</span>
+                    <span class="avatar small" style="background:${p.colour}">${safeHtml(p.nickname[0].toUpperCase())}</span>
+                    <span>${safeHtml(p.nickname)}</span>
                 </div>
                 <strong>${state.scores[p.id]}</strong>
             </div>
@@ -393,7 +405,7 @@ function startPreRoundCountdown() {
                     <div class="panel countdown">
                         <div class="brand-pill">Get Ready</div>
                         <h1>${countdownLeft}</h1>
-                        <p>${state.turn_category || ""}</p>
+                        <p>${safeHtml(state.turn_category || "")}</p>
                     </div>
                 </div>
             `;
@@ -517,9 +529,9 @@ function showReveal(reveal) {
         <div class="center-screen">
             <div class="panel reveal">
                 <div class="brand-pill">Answer Reveal</div>
-                <h2>${message}</h2>
+                <h2>${safeHtml(message)}</h2>
                 <p>The answer was:</p>
-                <div class="topic">${reveal.topic}</div>
+                <div class="topic">${safeHtml(reveal.topic)}</div>
             </div>
         </div>
     `;
@@ -580,16 +592,16 @@ function showFinalResults(data) {
         <div class="center-screen scroll-safe">
             <div class="panel final-card">
                 <div class="brand-pill">Game Over</div>
-                <h1>🏆 ${winnerText}</h1>
+                <h1>🏆 ${safeHtml(winnerText)}</h1>
 
                 <h2>Final Scores</h2>
                 ${sorted.map(p => `
                     <div class="score-row">
                         <div class="player-left">
                             <span class="avatar small" style="background:${p.colour}">
-                                ${p.nickname[0].toUpperCase()}
+                                ${safeHtml(p.nickname[0].toUpperCase())}
                             </span>
-                            <span>${p.nickname}</span>
+                            <span>${safeHtml(p.nickname)}</span>
                         </div>
                         <strong>${data.scores[p.id]}</strong>
                     </div>
@@ -620,7 +632,7 @@ function showFinalResults(data) {
                                 </div>
 
                                 <div>
-                                    <strong>${p.nickname}</strong>
+                                    <strong>${safeHtml(p.nickname)}</strong>
                                     <span>${title}</span>
                                     <h3>${achievement[1]}</h3>
                                     <p>${achievement[2]}</p>
@@ -633,7 +645,7 @@ function showFinalResults(data) {
                 <h2>Stats</h2>
                 ${sorted.map(p => `
                     <div class="stat-row">
-                        <strong>${p.nickname}</strong>
+                        <strong>${safeHtml(p.nickname)}</strong>
                         <span>Correct: ${data.stats[p.id].correct || 0}</span>
                         <span>Speaker: ${data.stats[p.id].speaker_success || 0}</span>
                         <span>Panics: ${data.stats[p.id].panics || 0}</span>
@@ -643,7 +655,7 @@ function showFinalResults(data) {
                 `).join("")}
 
                 ${
-                    state.you === state.host_id
+                    state.is_host === true
                     ? `<button onclick="socket.emit('rematch')">Rematch</button>`
                     : ""
                 }
@@ -669,7 +681,27 @@ function showReaction(data) {
     item.className = "floating-reaction";
     item.style.left = `${20 + Math.random() * 60}%`;
     item.style.borderColor = data.colour;
-    item.innerHTML = `<span>${data.emoji}</span><small>${data.nickname}</small>`;
+    item.innerHTML = `<span>${data.emoji}</span><small>${safeHtml(data.nickname)}</small>`;
     layer.appendChild(item);
     setTimeout(() => item.remove(), 1800);
 }
+
+// Shared FYWA game selector can send everybody back to the same room.
+socket.on("hub_navigate", data => { if (data?.url) window.location.href = data.url; });
+
+
+// Compact viewport: keep the game visible; put scoreboard and host actions in a drawer.
+function toggleFyoaScores(force) {
+    const panel = document.getElementById('fyoa-scores-overlay');
+    if (!panel) return;
+    const open = typeof force === 'boolean' ? force : panel.hidden;
+    panel.hidden = !open;
+    document.getElementById('fyoa-score-toggle')?.setAttribute('aria-expanded', String(open));
+    refreshFyoaScores();
+}
+function refreshFyoaScores() {
+    const target = document.getElementById('fyoa-scores-content');
+    if (!target || !state) return;
+    target.innerHTML = `${hostControls()}<div class="fywa-overline">LIVE SCORES</div>${scoreboard()}`;
+}
+document.addEventListener('keydown', ev => {if (ev.key==='Escape') toggleFyoaScores(false);});
