@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FYWA — Let's Play</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script defer src="{{ url_for('static', filename='party/game.js') }}"></script>
+</head>
+<body class="fywa-body">
+  <main class="fywa-container fywa-playing">
+    <header class="fywa-room-head fywa-game-head">
+      <div><a href="/room/{{ room_code }}" class="fywa-back">← ROOM {{ room_code }}</a><div class="fywa-eyebrow">FYWA GAME NIGHT</div><h1 id="game-name">LET'S PLAY<span>.</span></h1></div>
+      <div class="fywa-share"><small>IN THE ROOM</small><strong>{{ room_code }}</strong><button id="back-to-hub" class="fywa-button fywa-outline" hidden>END & RETURN TO LOBBY</button></div>
+    </header>
+    <div id="toast-area"></div>
+    <button id="party-panel-toggle" type="button" class="fywa-panel-toggle" aria-expanded="false" aria-controls="party-sidebar" onclick="togglePartyPanel()">☰ SCORES & INFO</button>
+    <div id="party-game"></div>
+  </main>
+  <script>window.FYWA_ROOM_CODE = {{ room_code | tojson }};</script>
+</body>
+</html>

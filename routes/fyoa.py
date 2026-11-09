@@ -11,12 +11,11 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from flask_socketio import join_room
 
 from extensions import socketio
+from game_state.rooms import rooms
 
 fyoa_bp = Blueprint("fyoa", __name__, url_prefix="/fyoa")
 
-rooms = {}
-
-PACK_DIR = os.path.join("data", "packs")
+PACK_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "packs")
 os.makedirs(PACK_DIR, exist_ok=True)
 
 ROOM_MAX_AGE_SECONDS = 6 * 60 * 60
@@ -34,7 +33,8 @@ BUZZER_SOUNDS = [
 PLAYER_COLOURS = [
     "#3b82f6", "#22c55e", "#ef4444", "#f97316",
     "#a855f7", "#ec4899", "#06b6d4", "#eab308",
-    "#111827", "#f8fafc"
+    "#10b981", "#f43f5e", "#8b5cf6", "#f59e0b",
+    "#14b8a6", "#84cc16", "#6366f1", "#d946ef",
 ]
 
 EMOJIS = ["😂", "😡", "👏", "🤯", "💀", "👀"]
@@ -76,9 +76,14 @@ def safe_pack_name(name):
 def validate_colour(colour):
     if colour in PLAYER_COLOURS:
         return colour
-    if re.fullmatch(r"#[0-9a-fA-F]{6}", colour or ""):
-        return colour
     return PLAYER_COLOURS[0]
+
+
+def available_colour(room, preferred):
+    taken = {p["colour"] for p in room["players"].values()}
+    if preferred in PLAYER_COLOURS and preferred not in taken:
+        return preferred
+    return next((c for c in PLAYER_COLOURS if c not in taken), PLAYER_COLOURS[0])
 
 
 def validate_csv_pack(file_storage):
@@ -231,11 +236,19 @@ def transfer_host_if_needed(room_code):
     host = room["players"].get(room["host_id"])
 
     if host and host.get("connected", False):
+        room.pop("host_disconnected_at", None)
+        return
+    # Normal navigation disconnects a socket for a moment. Do not steal the host
+    # from somebody merely moving between lobby and game pages.
+    if now() - room.get("host_disconnected_at", now()) < 15:
         return
 
     for pid, player in room["players"].items():
         if player.get("connected", False):
             room["host_id"] = pid
+            room.pop("host_disconnected_at", None)
+            from routes.hub import emit_hub_state
+            emit_hub_state(room_code)
             socketio.emit("toast", {
                 "message": f"{player['nickname']} is now host.",
                 "type": "info"
@@ -298,6 +311,7 @@ def emit_game_state(room_code):
     for sid in room["players"].keys():
         payload = public_room(room_code)
         payload["you"] = sid
+        payload["is_host"] = sid == room["host_id"]
 
         if current:
             payload["current"] = current.copy()
@@ -565,14 +579,14 @@ def end_round(room_code, result, winner_id=None, answer_time=None):
 @fyoa_bp.route("")
 def fyoa_menu():
     cleanup_rooms()
-    return render_template("fyoa/index.html", colours=PLAYER_COLOURS)
+    return redirect(url_for("hub.index"))
 
 
 @fyoa_bp.route("/create", methods=["POST"])
 def create():
     cleanup_rooms()
 
-    nickname = request.form["nickname"].strip()
+    nickname = re.sub(r'[<>&"`\x00-\x1f]', "", request.form.get("nickname", "")).strip()[:24]
     colour = validate_colour(request.form.get("colour", PLAYER_COLOURS[0]))
 
     if not nickname:
@@ -593,6 +607,10 @@ def create():
 
     rooms[room_code] = {
         "host_id": player_id,
+        "active_game": "fyoa",
+        "party": None,
+        "teams": {player_id: 0},
+        "spymasters": {},
         "players": {
             player_id: {
                 "id": player_id,
@@ -622,6 +640,7 @@ def create():
             "vote_option_count": 5,
             "sudden_death": True,
             "enable_custom_prompts": True,
+            "clueless_extreme": False,  # Host opt-in, never enabled by default
         },
         "speaker_queue": [],
         "turn_number": 0,
@@ -638,14 +657,14 @@ def create():
         "updated_at": now(),
     }
 
-    return redirect(url_for("fyoa.lobby", room_code=room_code))
+    return redirect(url_for("hub.room_lobby", room_code=room_code))
 
 
 @fyoa_bp.route("/join", methods=["POST"])
 def join():
     cleanup_rooms()
 
-    nickname = request.form["nickname"].strip()
+    nickname = re.sub(r'[<>&"`\x00-\x1f]', "", request.form.get("nickname", "")).strip()[:24]
     room_code = request.form["room_code"].strip().upper()
     colour = validate_colour(request.form.get("colour", PLAYER_COLOURS[0]))
     spectator = request.form.get("spectator") == "on"
@@ -656,13 +675,24 @@ def join():
     if not room_code:
         return render_template("error.html", message="Please enter a room code.")
 
+    if len(nickname) > 24:
+        nickname = nickname[:24]
+
     if room_code not in rooms:
         return render_template("error.html", message=f"Room {room_code} was not found. Check the code and try again.")
 
     room = rooms[room_code]
 
-    if room["state"] == "finished":
-        return render_template("error.html", message="This game has already finished.")
+    if any(p["nickname"].casefold() == nickname.casefold() for p in room["players"].values()):
+        return render_template("error.html", message="That nickname is already in this room.")
+    if len(room["players"]) >= 16:
+        return render_template("error.html", message="This room is full (16 players).")
+    if room["state"] not in ("lobby", "finished") or (room.get("party") or {}).get("phase") not in (None, "finished"):
+        if not spectator:
+            return render_template("error.html", message="A game is underway. Join as spectator, or wait for the next game.")
+    colour = available_colour(room, colour)
+    team_counts = [list(room.get("teams", {}).values()).count(t) for t in (0, 1)]
+    new_team = 0 if team_counts[0] <= team_counts[1] else 1
 
     player_id = str(uuid.uuid4())
     player_token = str(uuid.uuid4())
@@ -673,6 +703,7 @@ def join():
     session["nickname"] = nickname
     session["room_code"] = room_code
 
+    room.setdefault("teams", {})[player_id] = new_team
     room["players"][player_id] = {
         "id": player_id,
         "token": player_token,
@@ -691,29 +722,22 @@ def join():
 
     touch_room(room_code)
 
-    if room["state"] == "lobby":
-        return redirect(url_for("fyoa.lobby", room_code=room_code))
-
-    return redirect(url_for("fyoa.game", room_code=room_code))
+    return redirect(url_for("hub.room_lobby", room_code=room_code))
 
 
 @fyoa_bp.route("/lobby/<room_code>")
 def lobby(room_code):
-    cleanup_rooms()
-
-    if room_code not in rooms:
-        return render_template("error.html", message=f"Room {room_code} was not found or has expired.")
-
-    return render_template("fyoa/lobby.html", room_code=room_code)
+    return redirect(url_for("hub.room_lobby", room_code=room_code))
 
 
 @fyoa_bp.route("/game/<room_code>")
 def game(room_code):
     cleanup_rooms()
-
-    if room_code not in rooms:
-        return render_template("error.html", message=f"Room {room_code} was not found or has expired.")
-
+    room = rooms.get(room_code)
+    if not room or session.get("player_id") not in room["players"]:
+        return render_template("error.html", message="Join this room before playing."), 403
+    if room.get("active_game") != "fyoa":
+        return redirect(url_for("hub.room_lobby", room_code=room_code))
     return render_template("fyoa/game.html", room_code=room_code)
 
 
@@ -749,9 +773,35 @@ def upload_pack():
     room["settings"]["packs"] = list(load_packs().keys())
     touch_room(room_code)
     emit_game_state(room_code)
+    from routes.hub import emit_hub_state
+    emit_hub_state(room_code)
 
     return jsonify({"ok": True})
 
+@socketio.on("fyoa_join_socket")
+def fyoa_join_socket():
+    room_code = session.get("room_code")
+    player_id = session.get("player_id")
+
+    if not room_code or room_code not in rooms or not player_id:
+        return
+
+    room = rooms[room_code]
+
+    if player_id not in room["players"]:
+        return
+
+    room["players"][player_id]["connected"] = True
+    if player_id == room["host_id"]:
+        room.pop("host_disconnected_at", None)
+
+    join_room(room_code)
+    join_room(player_id)
+
+    touch_room(room_code)
+    emit_game_state(room_code)
+    from routes.hub import emit_hub_state
+    emit_hub_state(room_code)
 
 @socketio.on("connect")
 def on_connect():
@@ -765,13 +815,18 @@ def on_connect():
 
     room = rooms[room_code]
 
-    if player_id in room["players"]:
-        room["players"][player_id]["connected"] = True
+    if player_id not in room["players"]:
+        return
+    room["players"][player_id]["connected"] = True
+    if player_id == room["host_id"]:
+        room.pop("host_disconnected_at", None)
 
     join_room(room_code)
     join_room(player_id)
     touch_room(room_code)
     emit_game_state(room_code)
+    from routes.hub import emit_hub_state
+    emit_hub_state(room_code)
 
 
 @socketio.on("disconnect")
@@ -781,16 +836,24 @@ def on_disconnect():
 
     if room_code in rooms and player_id in rooms[room_code]["players"]:
         rooms[room_code]["players"][player_id]["connected"] = False
+        if rooms[room_code]["host_id"] == player_id:
+            rooms[room_code]["host_disconnected_at"] = now()
         touch_room(room_code)
-        transfer_host_if_needed(room_code)
         emit_game_state(room_code)
+        from routes.hub import emit_hub_state
+        emit_hub_state(room_code)
+
+
+def active_fyoa_room(room_code):
+    room = rooms.get(room_code)
+    return room if room and room.get("active_game", "fyoa") == "fyoa" else None
 
 
 @socketio.on("update_settings")
 def update_settings(data):
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or room["host_id"] != player_id:
         return
@@ -824,9 +887,12 @@ def update_settings(data):
 def on_start_game():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or room["host_id"] != player_id:
+        return
+
+    if room["state"] not in ("lobby", "finished"):
         return
 
     if len(active_player_ids(room)) < 2:
@@ -841,7 +907,7 @@ def on_start_game():
 def vote_category(data):
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or room["state"] != "voting":
         return
@@ -870,7 +936,7 @@ def vote_category(data):
 def force_resolve_vote():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if room and room["host_id"] == player_id and room["state"] == "voting":
         resolve_vote(room_code)
@@ -880,7 +946,7 @@ def force_resolve_vote():
 def on_buzz(data=None):
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or room["state"] != "playing":
         return
@@ -908,7 +974,7 @@ def on_buzz(data=None):
 def answer_wrong():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or room["state"] != "playing":
         return
@@ -934,7 +1000,7 @@ def answer_wrong():
 def answer_correct(data=None):
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or room["state"] != "playing":
         return
@@ -958,7 +1024,7 @@ def answer_correct(data=None):
 def speaker_foul():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if room and room["state"] == "playing" and player_id == room["current"]["speaker_id"]:
         end_round(room_code, "speaker_foul")
@@ -967,18 +1033,19 @@ def speaker_foul():
 @socketio.on("round_timeout")
 def round_timeout():
     room_code = session.get("room_code")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
-    if room and room["state"] == "playing":
+    if room and room["state"] == "playing" and session.get("player_id") in (room["host_id"], room["current"]["speaker_id"]):
         end_round(room_code, "timeout")
 
 
 @socketio.on("answer_timeout")
 def answer_timeout():
     room_code = session.get("room_code")
-    room = rooms.get(room_code)
+    player_id = session.get("player_id")
+    room = active_fyoa_room(room_code)
 
-    if not room or room["state"] != "playing":
+    if not room or room["state"] != "playing" or player_id not in (room["host_id"], room["current"]["speaker_id"]):
         return
 
     current = room["current"]
@@ -998,7 +1065,7 @@ def answer_timeout():
 def reroll_letters():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or room["state"] != "playing":
         return
@@ -1022,7 +1089,7 @@ def reroll_letters():
 @socketio.on("auto_reroll_letters")
 def auto_reroll_letters():
     room_code = session.get("room_code")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or room["state"] != "playing":
         return
@@ -1042,7 +1109,7 @@ def auto_reroll_letters():
 def panic():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or room["state"] != "playing":
         return
@@ -1098,7 +1165,7 @@ def panic():
 @socketio.on("next_round")
 def next_round():
     room_code = session.get("room_code")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if room and room["state"] == "reveal":
         start_round(room_code)
@@ -1108,7 +1175,7 @@ def next_round():
 def pause_game():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if room and room["host_id"] == player_id and room["state"] == "playing":
         room["state"] = "paused"
@@ -1119,7 +1186,7 @@ def pause_game():
 def resume_game():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if room and room["host_id"] == player_id and room["state"] == "paused":
         room["state"] = "playing"
@@ -1130,7 +1197,7 @@ def resume_game():
 def force_next_round():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if room and room["host_id"] == player_id and room["current"]:
         end_round(room_code, "forced")
@@ -1140,7 +1207,7 @@ def force_next_round():
 def end_game():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if room and room["host_id"] == player_id:
         finish_game(room_code)
@@ -1150,7 +1217,7 @@ def end_game():
 def reaction(data):
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or player_id not in room["players"]:
         return
@@ -1170,7 +1237,7 @@ def reaction(data):
 def submit_custom_prompts(data):
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or player_id not in room["players"]:
         return
@@ -1197,7 +1264,7 @@ def submit_custom_prompts(data):
 def rematch():
     room_code = session.get("room_code")
     player_id = session.get("player_id")
-    room = rooms.get(room_code)
+    room = active_fyoa_room(room_code)
 
     if not room or room["host_id"] != player_id:
         return

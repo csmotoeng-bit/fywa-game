@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FYWA — Room {{ room_code }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script defer src="{{ url_for('static', filename='hub.js') }}"></script>
+</head>
+<body class="fywa-body">
+  <main class="fywa-container fywa-room" data-pane="games">
+    <nav class="fywa-lobby-tabs" aria-label="Lobby views"><button class="fywa-entry-tab" type="button" data-room-pane="players" aria-pressed="false">PLAYERS</button><button class="fywa-entry-tab active" type="button" data-room-pane="games" aria-pressed="true">GAMES & SETTINGS</button></nav>
+    <header class="fywa-room-head">
+      <div><a href="/" class="fywa-back">← FYWA</a><div class="fywa-eyebrow">GAME NIGHT CONTROL CENTRE</div><h1>THE LOBBY<span>.</span></h1></div>
+      <div class="fywa-share"><small>INVITE YOUR MATES</small><strong id="room-code">{{ room_code }}</strong><button class="fywa-button fywa-outline" onclick="copyInvite()">COPY INVITE</button></div>
+    </header>
+    <div id="toast-area"></div>
+    <div class="fywa-lobby-columns">
+      <section class="fywa-panel fywa-roster-panel">
+        <div class="fywa-section-heading"><span>WHO'S HERE</span><span id="player-count">...</span></div>
+        <div id="room-players" class="fywa-roster"></div>
+        <div class="fywa-separator"></div>
+        <h3>Your colour</h3>
+        <div id="room-colours" class="fywa-colours"></div>
+        <p class="fywa-muted">One colour per player. Yours follows you into every game.</p>
+        <div id="room-teams" hidden>
+          <div class="fywa-separator"></div><h3>Clueless teams & spymasters</h3>
+          <p class="fywa-muted">Host can assign players. Each side needs at least two players.</p>
+          <div id="team-controls"></div>
+        </div>
+      </section>
+      <section class="fywa-panel fywa-picker-panel">
+        <div class="fywa-section-heading"><span>CHOOSE YOUR WEAPON</span><span>HOST CONTROLLED</span></div>
+        <div id="room-game-grid" class="fywa-pick-grid"></div>
+        <div id="game-config" class="fywa-config"></div>
+        <div id="room-host-controls" class="fywa-actions" hidden>
+          <button class="fywa-button fywa-primary" id="start-button">START GAME <span>↗</span></button>
+          <button class="fywa-button fywa-outline" id="return-button" hidden>RESET TO LOBBY</button>
+        </div>
+        <div id="nonhost-banner" class="fywa-notice">Waiting for the host to choose a game…</div>
+        <button id="rejoin-button" class="fywa-button fywa-outline" hidden>RETURN TO ACTIVE GAME ↗</button>
+      </section>
+    </div>
+    <footer class="fywa-footer">All players stay in this room when the host switches games. Leaving the browser may mark you disconnected, but won't erase your seat.</footer>
+  </main>
+  <script>window.FYWA_ROOM_CODE = {{ room_code | tojson }};</script>
+</body>
+</html>
