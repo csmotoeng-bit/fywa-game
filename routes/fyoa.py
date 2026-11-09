@@ -74,14 +74,14 @@ def safe_pack_name(name):
 
 
 def validate_colour(colour):
-    if colour in PLAYER_COLOURS:
-        return colour
+    if isinstance(colour, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", colour):
+        return colour.lower()
     return PLAYER_COLOURS[0]
 
 
 def available_colour(room, preferred):
     taken = {p["colour"] for p in room["players"].values()}
-    if preferred in PLAYER_COLOURS and preferred not in taken:
+    if re.fullmatch(r"#[0-9a-f]{6}", preferred) and preferred not in taken:
         return preferred
     return next((c for c in PLAYER_COLOURS if c not in taken), PLAYER_COLOURS[0])
 
@@ -229,31 +229,21 @@ def should_start_sudden_death(room):
 
 
 def transfer_host_if_needed(room_code):
+    """Compatibility shim: ownership is permanent until the host explicitly transfers it.
+
+    Disconnections, navigation and temporary connectivity loss must not steal
+    the room. An offline host can return using their original session.
+    """
+    return
+
+
+def mark_player_connected(room_code, player_id, socket_id):
     room = rooms.get(room_code)
-    if not room:
+    if not room or player_id not in room["players"]:
         return
+    room.setdefault("socket_ids", {}).setdefault(player_id, set()).add(socket_id)
+    room["players"][player_id]["connected"] = True
 
-    host = room["players"].get(room["host_id"])
-
-    if host and host.get("connected", False):
-        room.pop("host_disconnected_at", None)
-        return
-    # Normal navigation disconnects a socket for a moment. Do not steal the host
-    # from somebody merely moving between lobby and game pages.
-    if now() - room.get("host_disconnected_at", now()) < 15:
-        return
-
-    for pid, player in room["players"].items():
-        if player.get("connected", False):
-            room["host_id"] = pid
-            room.pop("host_disconnected_at", None)
-            from routes.hub import emit_hub_state
-            emit_hub_state(room_code)
-            socketio.emit("toast", {
-                "message": f"{player['nickname']} is now host.",
-                "type": "info"
-            }, room=room_code)
-            return
 
 
 def player_public(player):
@@ -321,6 +311,8 @@ def emit_game_state(room_code):
             payload["current"] = None
 
         socketio.emit("game_state", payload, room=sid)
+    from routes.hub import emit_display_state
+    emit_display_state(room_code)
 
 
 def get_cards_for_category(room, category):
@@ -507,9 +499,12 @@ def begin_sudden_death(room_code):
 def finish_game(room_code):
     room = rooms[room_code]
     room["state"] = "finished"
+    room["lifecycle"] = "results"
     room["current"] = None
     touch_room(room_code)
 
+    from routes.hub import emit_display_state
+    emit_display_state(room_code)
     socketio.emit("game_finished", {
         "scores": room["scores"],
         "players": {pid: player_public(p) for pid, p in room["players"].items()},
@@ -607,6 +602,9 @@ def create():
 
     rooms[room_code] = {
         "host_id": player_id,
+        "lifecycle": "lobby",
+        "ready": {},
+        "socket_ids": {},
         "active_game": "fyoa",
         "party": None,
         "teams": {player_id: 0},
@@ -618,7 +616,7 @@ def create():
                 "nickname": nickname,
                 "buzzer": BUZZER_SOUNDS[0],
                 "colour": colour,
-                "connected": True,
+                "connected": False,
                 "spectator": False,
                 "panic_uses_left": 1,
                 "custom_prompts": [],
@@ -641,6 +639,8 @@ def create():
             "sudden_death": True,
             "enable_custom_prompts": True,
             "clueless_extreme": False,  # Host opt-in, never enabled by default
+            "clueless_timer": 0,
+            "ready_required": False,
         },
         "speaker_queue": [],
         "turn_number": 0,
@@ -710,7 +710,7 @@ def join():
         "nickname": nickname,
         "buzzer": BUZZER_SOUNDS[player_index % len(BUZZER_SOUNDS)],
         "colour": colour,
-        "connected": True,
+        "connected": False,
         "spectator": spectator,
         "panic_uses_left": int(room["settings"].get("panic_uses", 1)),
         "custom_prompts": [],
@@ -791,9 +791,7 @@ def fyoa_join_socket():
     if player_id not in room["players"]:
         return
 
-    room["players"][player_id]["connected"] = True
-    if player_id == room["host_id"]:
-        room.pop("host_disconnected_at", None)
+    mark_player_connected(room_code, player_id, request.sid)
 
     join_room(room_code)
     join_room(player_id)
@@ -817,9 +815,7 @@ def on_connect():
 
     if player_id not in room["players"]:
         return
-    room["players"][player_id]["connected"] = True
-    if player_id == room["host_id"]:
-        room.pop("host_disconnected_at", None)
+    mark_player_connected(room_code, player_id, request.sid)
 
     join_room(room_code)
     join_room(player_id)
@@ -835,9 +831,10 @@ def on_disconnect():
     player_id = session.get("player_id")
 
     if room_code in rooms and player_id in rooms[room_code]["players"]:
-        rooms[room_code]["players"][player_id]["connected"] = False
-        if rooms[room_code]["host_id"] == player_id:
-            rooms[room_code]["host_disconnected_at"] = now()
+        room = rooms[room_code]
+        sockets = room.setdefault("socket_ids", {}).setdefault(player_id, set())
+        sockets.discard(request.sid)
+        room["players"][player_id]["connected"] = bool(sockets)
         touch_room(room_code)
         emit_game_state(room_code)
         from routes.hub import emit_hub_state
@@ -861,6 +858,7 @@ def update_settings(data):
     selected_packs = data.get("packs") or list(load_packs().keys())
 
     room["settings"] = {
+        **room["settings"],
         "turn_limit": int(data.get("turn_limit", 3)),
         "target_score": int(data.get("target_score", 20)),
         "round_timer": int(data.get("round_timer", 60)),
@@ -892,13 +890,16 @@ def on_start_game():
     if not room or room["host_id"] != player_id:
         return
 
-    if room["state"] not in ("lobby", "finished"):
+    if room["state"] not in ("lobby", "finished") or room.get("lifecycle") != "lobby":
+        return
+    if room["settings"].get("ready_required") and any(not room.get("ready", {}).get(p, False) for p in active_player_ids(room)):
         return
 
     if len(active_player_ids(room)) < 2:
         socketio.emit("toast", {"message": "You need at least 2 players.", "type": "error"}, room=player_id)
         return
 
+    room["lifecycle"] = "playing"
     socketio.emit("go_to_game", {"room_code": room_code}, room=room_code)
     begin_voting(room_code)
 
@@ -1286,6 +1287,7 @@ def rematch():
     room["current"] = None
     room["last_reveal"] = None
     room["sudden_death_active"] = False
+    room["lifecycle"] = "lobby"
 
     socketio.emit("go_to_lobby", {"room_code": room_code}, room=room_code)
     emit_game_state(room_code)

@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>FYWA — Game Night</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="/static/appearance.js"></script>
 </head>
 <body class="fywa-body">
   <div class="fywa-container fywa-home" data-entry="host">
     <header class="fywa-hero">
       <div class="fywa-eyebrow">F*CK YOU WITH ANYTHING • THE PARTY HUB</div>
       <h1>GAME NIGHT.<span>NO MERCY.</span></h1>
-      <p>One lobby. All your mates. Four games designed to ruin friendships. No accounts, no downloads, just a room code.</p>
+      <p>One lobby. All your mates. Three games designed to ruin friendships. No accounts, no downloads, just a room code.</p>
     </header>
     <nav class="fywa-entry-tabs" aria-label="Choose how to enter"><button type="button" class="fywa-entry-tab active" data-entry-tab="host" aria-pressed="true">HOST</button><button type="button" class="fywa-entry-tab" data-entry-tab="join" aria-pressed="false">JOIN</button></nav>
     <section class="fywa-entry-grid">
@@ -38,7 +39,7 @@
       </form>
     </section>
     <section class="fywa-games-section">
-      <div class="fywa-section-heading"><span>THE COLLECTION</span><span>04 GAMES / 01 LOBBY</span></div>
+      <div class="fywa-section-heading"><span>THE COLLECTION</span><span>03 GAMES / 01 LOBBY</span></div>
       <div class="fywa-game-cards">
         {% for key, game in games.items() %}
         <div class="fywa-game-card"><div class="fywa-game-icon">{{ game.icon }}</div><div class="fywa-game-short">{{ game.short }}</div><h3>{{ game.name }}</h3><p>{{ game.tag }}</p></div>

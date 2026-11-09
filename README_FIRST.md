@@ -1,6 +1,6 @@
-> **V5:** Apple-inspired FYWA UI refinement and optional, host-controlled 18+ Clueless Extreme word pack. See [UPGRADE_NOTES_V5.md](UPGRADE_NOTES_V5.md).
+> **V6:** Shared team selection and lock-in, host identity and lobby lifecycle fixes, TV mode, rematches, three-game collection, per-device dark/light themes and sound controls. See [UPGRADE_NOTES_V6.md](UPGRADE_NOTES_V6.md).
 
-# FYWA GAME NIGHT HUB — V3
+# FYWA GAME NIGHT HUB — V6
 
 **This release restores the original FYWA purple, orange and pink styling, and adapts all active game screens to fit iPad, phone and desktop viewports without page scrolling.** Read `UPGRADE_NOTES_V3.md` for the tested sizes and quick iPad test steps.
 
@@ -16,10 +16,9 @@ The host can switch between four playable games. **Players keep the same room co
 |---|---|
 | **FYOA** | Original word-description / seven-letter buzzer game. FYOA settings, packs and prompts are now inside the shared lobby. |
 | **F*cking Clueless** | Two teams, 25 words, private Clue Master board, one-word clue + number, assassin tile. |
-| **Connect The F*cking Dots** | 16 tiles, four groups of four, everyone races individually, four mistakes allowed. |
 | **Forbidden F*cking Words** | Rotating speaker, a private target and five forbidden words, voice-based clues, first-come buzzer, correct/wrong adjudication. |
 
-The game library ships with **188 Clueless words, 16 authored Connections boards and 81 Forbidden Words cards**. All content is local and editable in `game_state/word_content.py`.
+The game library ships with **unhinged Clueless words, 320 optional single-word Extreme tiles, and 81 Forbidden Words cards**. All content is local and editable in `game_state/word_content.py`.
 
 Old, no-longer-selected games have been removed: F*cking Typical and F*cking Pass It, with their associated routes, pages, JavaScript and prompt CSVs. This download is a new clean **complete project**, not a patch.
 
@@ -53,7 +52,7 @@ The old FYOA `/fyoa` address now takes you to the FYWA homepage; old create/join
 
 **Clueless.** One team starts with nine tiles and the other has eight. Seven tiles are neutral and one is the assassin. Both Clue Masters see the full colour key; nobody else sees unrevealed colours. The current Clue Master gives a one-word clue and number; their teammates click up to that number plus one tiles. An incorrect/neutral tile ends the turn; assassin loses. Clear all your team's tiles to win.
 
-**Dots.** Every player receives the same shuffled 4×4 board but solves it independently. Submit four tiles to identify one real group. Correct: +100. Four groups completed: +300 and game ends. After four mistakes you're locked out. Other players cannot see your solved groups until the match ends.
+**Clueless V6.** Your team sees live selected tiles, but words only reveal when an eligible teammate clicks Lock In. Spymasters cannot lock guesses. Wrong words end the turn and the assassin causes an instant loss.
 
 **Forbidden.** Speaker sees a private target and five banned words. Others guess over voice chat, use the buzzer, and the speaker confirms correct/wrong. Correct gives +1 to speaker and guesser; wrong guess freezes that person for the card. Guessers may challenge forbidden words; the host judges and the clock pauses while the challenge is under review (15-second automatic dismissal safety net). If upheld, everyone except speaker gets +1. Everyone gets the configured number of speaking turns.
 
@@ -70,6 +69,6 @@ The old FYOA `/fyoa` address now takes you to the FYWA homepage; old create/join
 
 ## Testing
 
-Run `python -m unittest discover -s tests -v`. The provided integration tests simulate four clients and check lobby joining, colours, switching, original FYOA role secrecy, Clueless hidden keys, Connections scores, Forbidden buzzer privacy, and host migration.
+Run `python -m unittest discover -s tests -v`. The provided integration tests simulate four clients and check lobby joining, colours, switching, original FYOA role secrecy, Clueless hidden keys, shared tile selection and locking, Forbidden buzzer privacy, and host retention, explicit transfer and room resets.
 
 I have run these integration tests locally. **I have not run an interactive test across actual phones or under your live hosting setup**, so do that before replacing the deployed version.

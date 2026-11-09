@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script defer src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script defer src="{{ url_for('static', filename='hub.js') }}"></script>
+  <script defer src="/static/appearance.js"></script>
 </head>
 <body class="fywa-body">
   <main class="fywa-container fywa-room" data-pane="games">
@@ -22,6 +23,8 @@
         <div class="fywa-separator"></div>
         <h3>Your colour</h3>
         <div id="room-colours" class="fywa-colours"></div>
+        <div class="fywa-custom-colour"><label for="player-colour-custom">Custom player colour</label><input type="color" id="player-colour-custom" value="#ab63f4"><button class="fywa-button fywa-outline" onclick="setCustomPlayerColour()" type="button">USE COLOUR</button></div>
+        <button id="ready-button" class="fywa-button fywa-outline" hidden type="button">READY UP</button>
         <p class="fywa-muted">One colour per player. Yours follows you into every game.</p>
         <div id="room-teams" hidden>
           <div class="fywa-separator"></div><h3>Clueless teams & spymasters</h3>
@@ -37,6 +40,8 @@
           <button class="fywa-button fywa-primary" id="start-button">START GAME <span>↗</span></button>
           <button class="fywa-button fywa-outline" id="return-button" hidden>RESET TO LOBBY</button>
         </div>
+        <div id="room-extra-controls" class="fywa-extra-controls" hidden></div>
+        <div class="fywa-share-tools"><a class="fywa-button fywa-outline" href="/display/{{ room_code }}" target="_blank" rel="noopener">▣ OPEN TV VIEW</a></div>
         <div id="nonhost-banner" class="fywa-notice">Waiting for the host to choose a game…</div>
         <button id="rejoin-button" class="fywa-button fywa-outline" hidden>RETURN TO ACTIVE GAME ↗</button>
       </section>

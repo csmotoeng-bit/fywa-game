@@ -102,11 +102,11 @@ function clearAllTimers() {
 }
 
 function soundsEnabled() {
-    return state?.settings?.sound_enabled !== false;
+    return state?.settings?.sound_enabled !== false && !window.FYWATheme?.get().muted;
 }
 
 function volume(multiplier = 1) {
-    const base = parseFloat(state?.settings?.volume ?? 0.6);
+    const base = parseFloat(state?.settings?.volume ?? 0.6) * (window.FYWATheme?.get().volume ?? 1);
     return Math.max(0, Math.min(1, base * multiplier));
 }
 
@@ -656,11 +656,11 @@ function showFinalResults(data) {
 
                 ${
                     state.is_host === true
-                    ? `<button onclick="socket.emit('rematch')">Rematch</button>`
+                    ? `<button onclick="socket.emit('hub_rematch')">↻ Rematch</button><button onclick="socket.emit('hub_return')">← Return everyone to lobby</button>`
                     : ""
                 }
 
-                <a href="/fyoa" class="button-link">New Game</a>
+                <a href="/room/${encodeURIComponent(state.code)}" class="button-link">View lobby</a>
             </div>
         </div>
     `;

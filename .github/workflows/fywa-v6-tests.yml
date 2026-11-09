@@ -1,0 +1,22 @@
+name: FYWA V6 checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Python syntax
+        run: python -m compileall -q app.py routes game_state tests
+      - name: Multiplayer regression tests
+        env:
+          FYWA_ASYNC_MODE: threading
+          SECRET_KEY: test-secret-for-ci-only-not-production
+        run: python -m unittest discover -s tests -v

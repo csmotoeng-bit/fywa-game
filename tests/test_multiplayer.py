@@ -62,16 +62,26 @@ class MultiplayerTests(unittest.TestCase):
     def test_shared_room_colours_and_game_switching(self):
         self.assertEqual(self.clients[0].get('/room/'+self.code).status_code, 200)
         self.sockets[0].emit('hub_colour', {'colour': PALETTE[1]})
-        self.assertNotEqual(self.room['players'][self.ids[0]]['colour'],PALETTE[1])
+        self.assertNotEqual(self.room['players'][self.ids[0]]['colour'], PALETTE[1])
         self.sockets[0].emit('hub_colour', {'colour': '#a855f7'})
-        self.assertEqual(self.room['players'][self.ids[0]]['colour'],'#a855f7')
-        self.select('dots')
+        self.assertEqual(self.room['players'][self.ids[0]]['colour'], '#a855f7')
+        self.sockets[0].emit('hub_colour', {'colour': '#a7c921'})
+        self.assertEqual(self.room['players'][self.ids[0]]['colour'], '#a7c921')
+        # Connections is no longer selectable, even from a forged socket event.
+        self.sockets[0].emit('hub_select_game', {'game': 'dots'})
+        self.assertEqual(self.room['active_game'], 'fyoa')
+        self.select('clueless')
         self.start()
-        self.assertEqual(self.room['party']['phase'],'playing')
-        self.select('fyoa')
+        self.assertEqual(self.room['lifecycle'], 'playing')
+        self.sockets[0].emit('hub_select_game', {'game': 'fyoa'})
+        self.assertEqual(self.room['active_game'], 'clueless')
+        self.sockets[0].emit('hub_return')
+        self.assertEqual(self.room['active_game'], 'clueless')
         self.assertIsNone(self.room['party'])
-        self.assertEqual(self.room['state'],'lobby')
+        self.assertEqual(self.room['lifecycle'], 'lobby')
         self.assertEqual(len(self.room['players']),4)
+        self.assertEqual(self.room['host_id'],self.ids[0])
+        self.select('fyoa')
 
     def test_original_fyoa_survives(self):
         self.start()
@@ -105,28 +115,42 @@ class MultiplayerTests(unittest.TestCase):
         self.assertEqual(party['phase'],'guess')
         tile=next(i for i,t in enumerate(party['types']) if t!='assassin')
         self.sockets[self.ids.index(guesser)].emit('party_pick_tile',{'index':tile})
+        self.assertEqual(party['selected_index'],tile)
+        self.assertNotIn(tile,party['revealed'])
+        team_view=self.get_party_view(self.ids.index(guesser))
+        self.assertEqual(team_view['selected_index'],tile)
+        enemy=next(pid for pid in self.ids if self.room['teams'][pid]!=current)
+        enemy_view=self.get_party_view(self.ids.index(enemy))
+        self.assertIsNone(enemy_view['selected_index'])
+        self.assertIsNone(enemy_view['selected_by'])
+        old_rev=party['selection_rev']
+        self.sockets[self.ids.index(enemy)].emit('party_lock_tile',{'revision':old_rev})
+        self.assertEqual(party['revealed'],[])
+        self.sockets[self.ids.index(guesser)].emit('party_lock_tile',{'revision':old_rev})
         self.assertIn(tile,party['revealed'])
-        if party['phase'] != 'finished':
-            other=next(pid for pid in self.ids if self.room['teams'][pid]!=current)
-            before=list(party['revealed'])
-            self.sockets[self.ids.index(other)].emit('party_pick_tile', {'index':next(i for i in range(25) if i not in before)})
-            self.assertEqual(before,party['revealed'])
+        self.assertIsNone(party['selected_index'])
+        # A stale / duplicate lock cannot reveal a second tile.
+        before=list(party['revealed'])
+        self.sockets[self.ids.index(guesser)].emit('party_lock_tile',{'revision':old_rev})
+        self.assertEqual(before,party['revealed'])
 
-    def test_dots_private_progress_and_scoring(self):
-        self.select('dots'); self.start()
-        party=self.room['party']
-        self.assertEqual(self.get_party_view(0)['groups'],[])
-        self.assertEqual(self.get_party_view(1)['groups'],[])
-        for group in range(4):
-            indices=[i for i,v in enumerate(party['group_indices']) if v==group]
-            self.sockets[0].emit('party_dots_submit', {'indices':indices})
-            self.assertEqual(len(party['solved'][self.ids[0]]),group+1)
-            if group == 0:
-                self.assertEqual(self.get_party_view(1)['groups'],[])
-        self.assertEqual(party['phase'],'finished')
-        self.assertEqual(party['winner'],self.ids[0])
-        self.assertEqual(party['scores'][self.ids[0]],700)
-        self.assertEqual(len(self.get_party_view(1)['groups']),4)
+    def test_shared_selection_last_write_wins_without_revealing(self):
+        self.select('clueless'); self.start()
+        party=self.room['party'];turn=party['turn'];master=party['masters'][str(turn)]
+        guessers=[pid for pid in self.ids if self.room['teams'][pid]==turn and pid!=master]
+        self.sockets[self.ids.index(master)].emit('party_clue', {'clue':'CHAOS','count':3})
+        tile=next(i for i in range(25) if i not in party['revealed'])
+        self.sockets[self.ids.index(guessers[0])].emit('party_pick_tile',{'index':tile})
+        rev=party['selection_rev']
+        # Master sees pending guess but cannot lock in.
+        self.assertEqual(self.get_party_view(self.ids.index(master))['selected_index'],tile)
+        self.sockets[self.ids.index(master)].emit('party_lock_tile',{'revision':rev})
+        self.assertEqual(party['revealed'],[])
+        self.sockets[self.ids.index(guessers[0])].emit('party_pick_tile',{'index':(tile+1)%25})
+        self.sockets[self.ids.index(guessers[0])].emit('party_lock_tile',{'revision':rev})
+        self.assertEqual(party['revealed'],[])
+        self.sockets[self.ids.index(guessers[0])].emit('party_lock_tile',{'revision':party['selection_rev']})
+        self.assertEqual(len(party['revealed']),1)
 
     def test_forbidden_buzzer_scoring_and_timer(self):
         self.select('forbidden'); self.start()
@@ -158,9 +182,79 @@ class MultiplayerTests(unittest.TestCase):
         from routes.fyoa import transfer_host_if_needed
         transfer_host_if_needed(self.code)
         self.assertEqual(self.room['host_id'],self.ids[0])
-        self.room['host_disconnected_at']-=20
-        transfer_host_if_needed(self.code)
-        self.assertNotEqual(self.room['host_id'],self.ids[0])
+        tick_rooms()
+        self.assertEqual(self.room['host_id'],self.ids[0])
+        restored=socketio.test_client(app, flask_test_client=self.clients[0])
+        self.sockets[0]=restored
+        restored.emit('hub_join')
+        self.assertTrue(self.room['players'][self.ids[0]]['connected'])
+        self.assertEqual(self.room['host_id'],self.ids[0])
+
+    def test_host_ownership_survives_full_game_lifecycle(self):
+        self.select('clueless'); self.start()
+        host=self.room['host_id']
+        self.sockets[0].emit('hub_return')
+        self.assertEqual(self.room['host_id'],host)
+        self.assertEqual(self.room['lifecycle'],'lobby')
+        self.start()
+        self.assertEqual(self.room['host_id'],host)
+        self.assertEqual(self.room['lifecycle'],'playing')
+        # Force results state as if the game had finished.
+        self.room['party']['phase']='finished'
+        self.room['lifecycle']='results'
+        self.sockets[0].emit('hub_rematch')
+        self.assertEqual(self.room['host_id'],host)
+        self.assertEqual(self.room['lifecycle'],'playing')
+        self.sockets[0].emit('hub_return')
+        self.assertEqual(self.room['host_id'],host)
+        self.assertEqual(self.room['lifecycle'],'lobby')
+        self.assertIsNone(self.room['party'])
+        self.assertEqual(len(self.room['players']),4)
+
+    def test_host_transfer_is_explicit_only(self):
+        self.sockets[1].emit('hub_transfer_host',{'player_id':self.ids[2]})
+        self.assertEqual(self.room['host_id'],self.ids[0])
+        self.sockets[0].emit('hub_transfer_host',{'player_id':self.ids[2]})
+        self.assertEqual(self.room['host_id'],self.ids[2])
+        self.sockets[0].emit('hub_select_game',{'game':'clueless'})
+        self.assertEqual(self.room['active_game'],'fyoa')
+
+    def test_ready_up_is_optional_and_enforced_when_enabled(self):
+        self.sockets[0].emit('hub_settings',{'ready_required':True})
+        self.sockets[0].emit('hub_start')
+        self.assertEqual(self.room['lifecycle'],'lobby')
+        for socket in self.sockets:
+            socket.emit('hub_ready',{'ready':True})
+        self.sockets[0].emit('hub_start')
+        self.assertEqual(self.room['state'],'voting')
+        self.sockets[0].emit('hub_return')
+        self.assertEqual(self.room['ready'],{})
+
+    def test_party_pause_freezes_and_resume_restores_time(self):
+        self.select('forbidden'); self.start()
+        game=self.room['party']
+        initial=game['deadline']
+        self.sockets[0].emit('hub_pause',{'pause':True})
+        self.assertIsNotNone(game['paused_at'])
+        game['deadline']=0
+        tick_rooms()
+        self.assertEqual(game['phase'],'playing')
+        game['deadline']=initial
+        game['paused_at']-=8
+        self.sockets[0].emit('hub_pause',{'pause':False})
+        self.assertIsNone(game.get('paused_at'))
+        self.assertGreater(game['deadline'],initial+6)
+
+    def test_tv_view_does_not_reveal_secret(self):
+        self.select('clueless');self.start()
+        from routes.hub import display_view
+        public=display_view(self.code)['party']
+        self.assertEqual(len(public['words']),25)
+        self.assertEqual(public['types'],[None]*25)
+        self.assertNotIn('selected_index',public)
+        self.assertNotIn('masters',public)
+        self.assertEqual(self.clients[1].get('/display/'+self.code).status_code,200)
+
 
 
 if __name__=='__main__':
