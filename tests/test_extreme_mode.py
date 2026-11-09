@@ -31,6 +31,7 @@ class ExtremeModeTests(unittest.TestCase):
         board=self.room["party"]["words"]
         self.assertEqual(len(board), 25)
         self.assertEqual(len(set(board)), 25)
+        self.assertTrue(all(len(word.split()) == 1 for word in board))
         self.assertEqual(len(set(board) & (set(CLUELESS_EXTREME_WORDS)-set(CLUELESS_WORDS))), 15)
         self.assertTrue(self.get_party_view(1)["extreme"])
         self.sockets[0].emit("hub_settings", {"clueless_extreme": False})
@@ -39,7 +40,7 @@ class ExtremeModeTests(unittest.TestCase):
 
     def test_content(self):
         validate_content()
-        for word in ("HITLER", "JEWS", "TIANANMEN SQUARE", "DILDO"):
+        for word in ("HITLER", "JEWS", "TIANANMEN", "DILDO"):
             self.assertIn(word, CLUELESS_EXTREME_WORDS)
 
 
