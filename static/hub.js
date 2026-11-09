@@ -30,7 +30,7 @@ function render() {
   $('room-players').innerHTML = hub.players.map(p => `
     <div class="fywa-player">
       <span class="fywa-avatar" style="background:${p.colour}">${esc(p.nickname[0].toUpperCase())}</span>
-      <div><strong>${esc(p.nickname)}</strong><small>${p.id === hub.host_id ? 'HOST' : p.spectator ? 'SPECTATOR' : hub.selected === 'clueless' ? teamName(p.team) + ' TEAM' : 'PLAYER'}${!p.connected ? ' • OFFLINE' : ''}</small></div>
+      <div><strong>${esc(p.nickname)}</strong><small>${p.id === hub.host_id ? 'HOST' : p.spectator ? 'SPECTATOR' : hub.selected === 'clueless' ? teamName(p.team) + ' TEAM' : 'PLAYER'}${!p.connected ? ' • OFFLINE' : ''}${p.ready ? ' • READY ✓' : ''}</small></div>
       ${p.id === hub.you ? '<span class="fywa-me">YOU</span>' : ''}
     </div>`).join('');
   const used = new Set(hub.players.filter(p => p.id !== hub.you).map(p => p.colour));
@@ -43,22 +43,59 @@ function render() {
     </button>`).join('');
   $('room-host-controls').hidden = !hub.is_host;
   $('nonhost-banner').hidden = hub.is_host;
-  $('rejoin-button').hidden = !hub.game_running;
+  $('rejoin-button').hidden = hub.lifecycle === 'lobby';
   $('rejoin-button').onclick = () => location.assign(`/room/${encodeURIComponent(hub.code)}/play`);
   const activePlayers = hub.players.filter(p => !p.spectator);
   const requiredPlayers = hub.selected === 'fyoa' ? 2 : 4;
   const teamsReady = hub.selected !== 'clueless' || [0,1].every(t => activePlayers.filter(p => p.team === t).length >= 2);
   const enoughPlayers = activePlayers.length >= requiredPlayers;
-  $('start-button').disabled = hub.game_running || !enoughPlayers || !teamsReady;
-  $('start-button').textContent = hub.game_running ? 'GAME IN PROGRESS' : !enoughPlayers ? `NEED ${requiredPlayers} PLAYERS` : !teamsReady ? 'NEED 2 PLAYERS PER TEAM' : `START ${hub.games[hub.selected]?.short || 'GAME'} ↗`;
-  $('return-button').hidden = !hub.game_running;
+  const notReady = hub.settings.ready_required && activePlayers.some(p => !p.ready);
+  $('start-button').disabled = hub.lifecycle !== 'lobby' || !enoughPlayers || !teamsReady || notReady;
+  $('start-button').textContent = hub.lifecycle === 'playing' ? 'GAME IN PROGRESS' : hub.lifecycle === 'results' ? 'GAME FINISHED · CHOOSE REMATCH' : !enoughPlayers ? `NEED ${requiredPlayers} PLAYERS` : !teamsReady ? 'NEED 2 PLAYERS PER TEAM' : notReady ? 'WAITING FOR PLAYERS TO READY' : `START ${hub.games[hub.selected]?.short || 'GAME'} ↗`;
+  $('return-button').hidden = hub.lifecycle === 'lobby';
   $('return-button').onclick = () => socket.emit('hub_return');
   $('start-button').onclick = () => { sendSettings(false); socket.emit('hub_start'); };
+  renderExtraControls();
   const teamsBox = $('room-teams');
   teamsBox.hidden = hub.selected !== 'clueless';
   if (hub.selected === 'clueless') renderTeams();
   renderConfig();
 }
+
+function setCustomPlayerColour(){
+  const colour=$('player-colour-custom')?.value;
+  if(colour)socket.emit('hub_colour',{colour});
+}
+function renderExtraControls(){
+  const readyBtn=$('ready-button');
+  const me=byId(hub.you);
+  readyBtn.hidden=hub.lifecycle!=='lobby'||!!me?.spectator;
+  readyBtn.textContent=me?.ready?'✓ READY — CLICK TO CANCEL':'I’M READY';
+  readyBtn.onclick=()=>socket.emit('hub_ready',{ready:!me?.ready});
+  const area=$('room-extra-controls');area.hidden=!hub.is_host;
+  if(!hub.is_host)return;
+  const candidates=hub.players.filter(p=>p.id!==hub.you&&p.connected);
+  const offlineHost=!hub.host_connected;
+  const expanded=area.querySelector('details')?.open;
+  area.innerHTML=`<details class="fywa-host-details"><summary>⚙ HOST CONTROLS · ${hub.lifecycle.toUpperCase()}</summary>
+    <div class="fywa-host-actions">
+      ${hub.lifecycle==='results'?`<button class="fywa-button fywa-primary" onclick="socket.emit('hub_rematch')">↻ REMATCH</button>`:''}
+      ${hub.lifecycle==='playing'?`<button class="fywa-button fywa-outline" onclick="socket.emit('hub_pause',{pause:${!hub.paused}})">${hub.paused?'▶ RESUME':'⏸ PAUSE'}</button>`:''}
+      ${hub.lifecycle==='lobby'&&hub.selected==='clueless'?`<button class="fywa-button fywa-outline" onclick="socket.emit('hub_balance_teams')">⚖ AUTO-BALANCE TEAMS</button>`:''}
+      ${hub.lifecycle==='lobby'?`<label class="fywa-checkline"><input id="ready_required" type="checkbox" ${hub.settings.ready_required?'checked':''} onchange="sendSettings(false)"> Require players to ready up</label>`:''}
+      <label for="fywa-transfer">Transfer host (never automatic)</label>
+      <div class="fywa-inline-control"><select id="fywa-transfer"><option value="">Choose player</option>${candidates.map(p=>`<option value="${p.id}">${esc(p.nickname)}</option>`).join('')}</select><button class="fywa-button fywa-outline" onclick="transferHost()" ${candidates.length?'':'disabled'}>TRANSFER</button></div>
+      ${hub.lifecycle!=='playing'?`<div class="fywa-host-manage">${hub.players.filter(p=>p.id!==hub.you).map(p=>`<div><span>${esc(p.nickname)}${p.spectator?' (spectator)':''}</span>${p.spectator&&hub.lifecycle==='lobby'?`<button class="fywa-mini-btn" onclick="socket.emit('hub_activate_spectator',{player_id:'${p.id}'})">ADD TO NEXT MATCH</button>`:''}<button class="fywa-mini-btn" onclick="removePlayer('${p.id}')">REMOVE</button></div>`).join('')}</div>`:''}
+    </div>
+  </details>`;
+  if(expanded)area.querySelector('details').open=true;
+}
+function transferHost(){
+  const player_id=$('fywa-transfer')?.value;
+  if(player_id&&confirm('Hand over hosting? You will lose host controls.'))socket.emit('hub_transfer_host',{player_id});
+}
+function removePlayer(player_id){if(confirm('Remove this player from the room?'))socket.emit('hub_kick',{player_id});}
+
 function renderTeams() {
   $('team-controls').innerHTML = [0,1].map(t => {
     const members = hub.players.filter(p => !p.spectator && p.team === t);
@@ -75,7 +112,7 @@ function assignTeam(player_id, team) { socket.emit('hub_assign_team', {player_id
 function setSpymaster(team, player_id) { socket.emit('hub_spymaster', {team,player_id}); }
 function renderConfig() {
   if (!hub) return;
-  const configKey = `${hub.selected}:${hub.is_host}:${hub.selected === 'clueless' ? !!hub.settings.clueless_extreme : ''}:${hub.game_running}`;
+  const configKey = `${hub.selected}:${hub.is_host}:${hub.selected === 'clueless' ? !!hub.settings.clueless_extreme : ''}:${hub.game_running}:${hub.settings.clueless_timer}`;
   if (renderedConfig === configKey) return;
   renderedConfig = configKey;
   const cfg = $('game-config');
@@ -88,9 +125,8 @@ function renderConfig() {
           <p>${extreme ? 'ON — 15 adult/controversial tiles mixed with 10 original tiles.' : 'OFF — Original FYWA unhinged word pack.'}</p>
           <small>Adult references, explicit words and sensitive historical or political terms. Only enable for groups comfortable with that content.</small></div>
         ${hub.is_host ? `<label class="fywa-switch" aria-label="Toggle the 18 plus extreme word pack"><input type="checkbox" id="clueless_extreme" ${extreme ? 'checked' : ''} ${hub.game_running ? 'disabled' : ''} onchange="sendSettings(false)"/><span class="fywa-switch-track"></span></label>` : `<span class="fywa-mode-status">${extreme ? 'ENABLED' : 'OFF'}</span>`}
-      </div>`;
-  } else if (hub.selected === 'dots') {
-    cfg.innerHTML = `<div class="fywa-config-title">CONNECT THE F*CKING DOTS</div><p>Every player races on their own copy of the same 16-word puzzle. Find four groups. Four mistakes and you're locked out.</p>${hub.is_host ? `<label>Round timer (seconds)</label><input type="number" id="dots_seconds" min="60" max="600" value="${s.dots_seconds || 240}">` : ''}`;
+      </div>
+      <div class="fywa-timer-setting"><label for="clueless_timer">Guessing timer</label>${hub.is_host ? `<select id="clueless_timer" onchange="sendSettings(false)"><option value="0" ${!s.clueless_timer?'selected':''}>Off</option>${[30,60,90].map(t=>`<option value="${t}" ${s.clueless_timer===t?'selected':''}>${t} seconds</option>`).join('')}</select>` : `<p>${s.clueless_timer ? s.clueless_timer+' seconds' : 'Off'}</p>`}</div>`;
   } else if (hub.selected === 'forbidden') {
     cfg.innerHTML = `<div class="fywa-config-title">FORBIDDEN F*CKING WORDS</div><p>Everyone gets a turn as speaker. Explain the target without saying any of the five banned words. Listeners race to buzz.</p>
       ${hub.is_host ? `<div class="fywa-two-cols"><div><label>Turns per player</label><input id="forbidden_turns" type="number" min="1" max="4" value="${s.forbidden_turns || 2}"></div><div><label>Seconds per card</label><input id="forbidden_seconds" type="number" min="30" max="150" value="${s.forbidden_seconds || 70}"></div></div>` : ''}`;
@@ -123,10 +159,10 @@ function numberField(id,label,value,min,max) { return `<div><label>${label}</lab
 function sendSettings(showMessage=true) {
   if (!hub?.is_host) return;
   const data = {};
-  for (const id of ['turn_limit','target_score','round_timer','answer_timer','letter_reroll_seconds','panic_uses','dots_seconds','forbidden_turns','forbidden_seconds']) {
+  for (const id of ['turn_limit','target_score','round_timer','answer_timer','letter_reroll_seconds','panic_uses','forbidden_turns','forbidden_seconds','clueless_timer']) {
     if ($(id)) data[id] = Number($(id).value);
   }
-  for (const id of ['speaker_scores','sudden_death','enable_custom_prompts','sound_enabled','clueless_extreme']) if ($(id)) data[id] = $(id).checked;
+  for (const id of ['speaker_scores','sudden_death','enable_custom_prompts','sound_enabled','clueless_extreme','ready_required']) if ($(id)) data[id] = $(id).checked;
   if ($('volume')) data.volume = Number($('volume').value);
   if (document.querySelector('.fywa-pack')) data.packs = [...document.querySelectorAll('.fywa-pack:checked')].map(e=>e.value);
   socket.emit('hub_settings', data);

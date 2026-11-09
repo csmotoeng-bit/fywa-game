@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FYWA TV — {{ room_code }}</title>
+<link rel="stylesheet" href="/static/style.css">
+<script defer src="/static/appearance.js"></script>
+<script defer src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script defer src="/static/display.js"></script>
+</head>
+<body class="fywa-body fywa-tv-body">
+<main class="fywa-tv-page">
+<header><div><span class="fywa-tv-kicker">FYWA / BIG SCREEN</span><h1 id="tv-game">GAME NIGHT.</h1></div><div><small>JOIN AT FYWA</small><strong>{{ room_code }}</strong></div></header>
+<section id="tv-content" aria-live="polite"><h2>Waiting for the host.</h2></section>
+<footer>DISPLAY ONLY · NO SECRET ANSWERS OR CLUE MASTER KEY</footer>
+</main>
+<script>window.FYWA_ROOM_CODE={{room_code|tojson}};</script>
+</body>
+</html>

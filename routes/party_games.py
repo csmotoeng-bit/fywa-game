@@ -13,7 +13,7 @@ from flask_socketio import join_room
 from extensions import socketio
 from game_state.rooms import rooms
 from game_state.word_content import (
-    CLUELESS_WORDS, CLUELESS_EXTREME_WORDS, DOTS_PUZZLES, FORBIDDEN_CARDS
+    CLUELESS_WORDS, CLUELESS_EXTREME_WORDS, FORBIDDEN_CARDS
 )
 
 party_bp = Blueprint("party", __name__)
@@ -49,7 +49,7 @@ def play(room_code):
     code, pid, room = authenticated()
     if code != room_code or not room:
         return redirect(url_for("hub.index"))
-    if not room.get("party") or room.get("active_game") not in ("clueless", "dots", "forbidden"):
+    if not room.get("party") or room.get("active_game") not in ("clueless", "forbidden"):
         return redirect(url_for("hub.room_lobby", room_code=room_code))
     return render_template("party/game.html", room_code=room_code)
 
@@ -78,7 +78,7 @@ def start_party(code):
                 return "Extreme mode needs at least 15 unique extreme words."
             normal_single_words = [word for word in CLUELESS_WORDS if len(word.split()) == 1]
             if len(normal_single_words) < 10:
-                return "Extreme mode needs at least ten one-word standard cards."
+                return "Extreme mode needs at least 10 unique single-word standard cards."
             words = _rng.sample(exclusive, 15) + _rng.sample(normal_single_words, 10)
             _rng.shuffle(words)
         else:
@@ -94,22 +94,8 @@ def start_party(code):
             "words": words, "types": types, "revealed": [],
             "masters": masters, "clue": "", "clue_count": 0, "guesses_left": 0,
             "winner": None, "last_event": "Spymasters, give your first clue.",
-            "started": stamp(),
-        }
-    elif key == "dots":
-        puzzle = _rng.choice(DOTS_PUZZLES)
-        entries = [(group_idx, word) for group_idx, (_, words) in enumerate(puzzle) for word in words]
-        _rng.shuffle(entries)
-        room["party"] = {
-            "kind": key, "phase": "playing", "round": 1,
-            "words": [w for _, w in entries],
-            "group_indices": [g for g, _ in entries],
-            "groups": [name for name, _ in puzzle],
-            "solved": {pid: [] for pid in pids},
-            "mistakes": {pid: 0 for pid in pids},
-            "scores": {pid: 0 for pid in pids}, "winner": None,
-            "last_event": "Find four groups of four. Four mistakes and you're out.",
-            "deadline": stamp() + int(room["settings"].get("dots_seconds", 240)),
+            "selected_index": None, "selected_by": None, "selection_rev": 0,
+            "clue_history": [], "last_reveal": None, "deadline": None, "paused_at": None,
             "started": stamp(),
         }
     elif key == "forbidden":
@@ -123,7 +109,7 @@ def start_party(code):
             "used": [], "card": None, "frozen": [],
             "buzzed": None, "flagged_by": None, "last_result": None,
             "winner": None, "last_event": "", "deadline": None,
-            "started": stamp(),
+            "paused_at": None, "started": stamp(),
         }
         next_forbidden_card(room)
     else:
@@ -187,6 +173,7 @@ def next_forbidden_round(code):
     if not game or game["kind"] != "forbidden" or game["phase"] != "reveal":
         return
     if game["round"] >= game["max_rounds"]:
+        rooms[code]["lifecycle"] = "results"
         game["phase"] = "finished"
         game["deadline"] = None
         winners = sorted(game["scores"], key=lambda x: -game["scores"][x])
@@ -206,6 +193,10 @@ def codenames_next_turn(game):
     game["clue"] = ""
     game["clue_count"] = 0
     game["guesses_left"] = 0
+    game["selected_index"] = None
+    game["selected_by"] = None
+    game["selection_rev"] += 1
+    game["deadline"] = None
     game["last_event"] = "Turn over. Next spymaster, your clue."
 
 
@@ -215,8 +206,9 @@ def party_view(room, pid):
         return None
     view = {
         "kind": game["kind"], "phase": game["phase"],
-        "round": game.get("round", 1), "you": pid,
+        "round": game.get("round", 1), "match_id": game.get("started", 0), "you": pid,
         "host_id": room["host_id"], "last_event": game.get("last_event", ""),
+        "paused": bool(game.get("paused_at")),
         "players": [{"id": p["id"], "nickname": p["nickname"],
                      "colour": p["colour"], "spectator": p.get("spectator", False),
                      "connected": p.get("connected", False),
@@ -229,27 +221,16 @@ def party_view(room, pid):
             "extreme": game.get("extreme", False),
             "masters": game["masters"], "clue": game["clue"], "clue_count": game["clue_count"],
             "guesses_left": game["guesses_left"], "winner": game["winner"],
+            "clue_history": game.get("clue_history", []),
+            "last_reveal": game.get("last_reveal"),
+            "remaining": max(0, int((game["deadline"] or stamp()) - (game.get("paused_at") or stamp()))) if game.get("deadline") else None,
+            "selected_index": game.get("selected_index") if room.get("teams", {}).get(pid) == game["turn"] and not room["players"][pid].get("spectator") else None,
+            "selected_by": game.get("selected_by") if room.get("teams", {}).get(pid) == game["turn"] and not room["players"][pid].get("spectator") else None,
+            "selection_rev": game.get("selection_rev") if room.get("teams", {}).get(pid) == game["turn"] and not room["players"][pid].get("spectator") else None,
             "remaining_counts": {t: sum(1 for i, v in enumerate(game["types"]) if v == t and i not in game["revealed"]) for t in ("blue", "red")},
             # Secrets only reach spymasters while playing; after finish they're public.
             "types": game["types"] if is_master or game["phase"] == "finished" else
                      [t if i in game["revealed"] else None for i, t in enumerate(game["types"])],
-        })
-    elif game["kind"] == "dots":
-        solved = game["solved"].get(pid, [])
-        view.update({
-            "words": game["words"], "solved": solved,
-            "mistakes": game["mistakes"].get(pid, 0),
-            "leaderboard": [{"id": who, "score": sc,
-                             "mistakes": game["mistakes"].get(who, 0)}
-                            for who, sc in sorted(game["scores"].items(), key=lambda x: -x[1])],
-            "remaining": max(0, int(game["deadline"] - stamp())),
-            "winner": game["winner"],
-            # Never reveal an opponent's attempted or completed group until game finishes.
-            "groups": [{"name": name, "words": [game["words"][i] for i, g in enumerate(game["group_indices"]) if g == index]}
-                       for index, name in enumerate(game["groups"])] if game["phase"] == "finished" else
-                       [{"id": g, "name": game["groups"][g],
-                         "indices": [i for i, gi in enumerate(game["group_indices"]) if gi == g]}
-                        for g in solved],
         })
     elif game["kind"] == "forbidden":
         is_speaker = pid == game["speaker"]
@@ -271,6 +252,8 @@ def emit_party_state(code):
         return
     for pid in room["players"]:
         socketio.emit("party_state", party_view(room, pid), room=pid)
+    from routes.hub import emit_display_state
+    emit_display_state(code)
 
 
 @socketio.on("party_join")
@@ -278,6 +261,9 @@ def join_party():
     code, pid, room = authenticated()
     if not room or not room.get("party"):
         return
+    from routes.fyoa import mark_player_connected
+    from flask import request
+    mark_player_connected(code, pid, request.sid)
     join_room(code)
     join_room(pid)
     socketio.emit("party_state", party_view(room, pid), room=pid)
@@ -289,7 +275,7 @@ def give_clue(data):
     if not room or room.get("active_game") != "clueless":
         return
     game = room.get("party")
-    if not game or game["phase"] != "clue" or game["masters"].get(str(game["turn"])) != pid:
+    if not game or game.get("paused_at") or game["phase"] != "clue" or game["masters"].get(str(game["turn"])) != pid:
         return
     data = data if isinstance(data, dict) else {}
     clue = str(data.get("clue", "")).strip().upper()
@@ -305,6 +291,12 @@ def give_clue(data):
     if not 1 <= count <= 9:
         return
     game["clue"] = clue
+    game["clue_history"].append({"team": game["turn"], "clue": clue, "count": count, "round": game["round"]})
+    game["selected_index"] = None
+    game["selected_by"] = None
+    game["selection_rev"] += 1
+    limit = room["settings"].get("clueless_timer", 0)
+    game["deadline"] = stamp() + limit if limit else None
     game["clue_count"] = count
     game["guesses_left"] = count + 1
     game["phase"] = "guess"
@@ -312,41 +304,79 @@ def give_clue(data):
     emit_party_state(code)
 
 
+def permitted_guesser(room, game, pid):
+    return (game and game["kind"] == "clueless" and game["phase"] == "guess"
+            and not game.get("paused_at") and pid in players_in(room)
+            and room.get("teams", {}).get(pid) == game["turn"]
+            and pid not in game["masters"].values())
+
+
 @socketio.on("party_pick_tile")
 def pick_tile(data):
     code, pid, room = authenticated()
-    if not room or room.get("active_game") != "clueless" or pid not in players_in(room):
+    if not room or room.get("active_game") != "clueless":
         return
     game = room.get("party")
-    if not game or game["phase"] != "guess" or room["teams"].get(pid) != game["turn"] or pid in game["masters"].values():
+    if not permitted_guesser(room, game, pid):
         return
     try:
-        index = int((data or {}).get("index", -1))
-    except (TypeError, ValueError):
+        index = (data or {}).get("index")
+    except (TypeError, AttributeError):
         return
-    if not 0 <= index < 25 or index in game["revealed"]:
+    if type(index) is not int or not 0 <= index < 25 or index in game["revealed"]:
         return
+    # Selection belongs to the team; never exposes any colour or reveal.
+    game["selected_index"] = index
+    game["selected_by"] = pid
+    game["selection_rev"] += 1
+    emit_party_state(code)
+
+
+@socketio.on("party_lock_tile")
+def lock_tile(data):
+    code, pid, room = authenticated()
+    if not room or room.get("active_game") != "clueless":
+        return
+    game = room.get("party")
+    if not permitted_guesser(room, game, pid):
+        return
+    # Revision binds confirmation to the highlight everybody actually saw.
+    revision = (data or {}).get("revision") if isinstance(data, dict) else None
+    if type(revision) is not int or revision != game["selection_rev"]:
+        return send_error(pid, "Your selection changed. Review the highlighted word before locking in.")
+    index = game.get("selected_index")
+    if type(index) is not int or index in game["revealed"]:
+        return
+    game["selected_index"] = None
+    game["selected_by"] = None
+    game["selection_rev"] += 1
     game["revealed"].append(index)
     target = game["types"][index]
+    game["last_reveal"] = {"index": index, "type": target, "word": game["words"][index], "by": pid}
     mine = "blue" if game["turn"] == 0 else "red"
     other = "red" if mine == "blue" else "blue"
-    game["last_event"] = f"{room['players'][pid]['nickname']} revealed {game['words'][index]}: {target.upper()}."
+    game["last_event"] = f"{room['players'][pid]['nickname']} locked {game['words'][index]}: {target.upper()}."
     if target == "assassin":
         game["winner"] = 1 - game["turn"]
         game["phase"] = "finished"
+        game["deadline"] = None
         game["last_event"] += " THE ASSASSIN! Instant loss."
     elif all(game["types"][i] != mine or i in game["revealed"] for i in range(25)):
         game["winner"] = game["turn"]
         game["phase"] = "finished"
+        game["deadline"] = None
     elif all(game["types"][i] != other or i in game["revealed"] for i in range(25)):
         game["winner"] = 1 - game["turn"]
         game["phase"] = "finished"
+        game["deadline"] = None
     elif target == mine:
         game["guesses_left"] -= 1
         if game["guesses_left"] <= 0:
             codenames_next_turn(game)
     else:
         codenames_next_turn(game)
+    if game["phase"] == "finished":
+        room["lifecycle"] = "results"
     emit_party_state(code)
 
 
@@ -356,45 +386,9 @@ def end_turn():
     if not room or room.get("active_game") != "clueless":
         return
     game = room.get("party")
-    if not game or game["phase"] != "guess" or pid not in players_in(room) or room["teams"].get(pid) != game["turn"]:
+    if not permitted_guesser(room, game, pid):
         return
     codenames_next_turn(game)
-    emit_party_state(code)
-
-
-@socketio.on("party_dots_submit")
-def submit_dots(data):
-    code, pid, room = authenticated()
-    if not room or room.get("active_game") != "dots" or pid not in players_in(room):
-        return
-    game = room.get("party")
-    if not game or game["phase"] != "playing" or game["deadline"] <= stamp() or game["mistakes"].get(pid, 4) >= 4:
-        return
-    items = (data or {}).get("indices", [])
-    if not isinstance(items, list) or len(items) != 4:
-        return
-    if any(type(x) is not int or not 0 <= x < 16 for x in items) or len(set(items)) != 4:
-        return
-    if any(game["group_indices"][i] in game["solved"][pid] for i in items):
-        return
-    groups = {game["group_indices"][i] for i in items}
-    if len(groups) == 1:
-        group = groups.pop()
-        game["solved"][pid].append(group)
-        game["scores"][pid] += 100
-        if len(game["solved"][pid]) == 4:
-            game["scores"][pid] += 300
-            game["winner"] = pid
-            game["phase"] = "finished"
-            game["last_event"] = f"{room['players'][pid]['nickname']} connected all the fucking dots!"
-        else:
-            game["last_event"] = f"{room['players'][pid]['nickname']} solved a group."
-    else:
-        game["mistakes"][pid] += 1
-        game["last_event"] = f"{room['players'][pid]['nickname']} made a wrong connection."
-    if game["phase"] == "playing" and all(game["mistakes"].get(p, 4) >= 4 for p in players_in(room)):
-        game["phase"] = "finished"
-        game["last_event"] = "Everyone ran out of guesses."
     emit_party_state(code)
 
 
@@ -405,7 +399,7 @@ def buzz():
         return
     game = room.get("party")
     if (not game or game["phase"] != "playing" or game.get("flagged_by")
-            or game["deadline"] <= stamp() or pid == game["speaker"] or pid in game["frozen"] or game["buzzed"]):
+            or game.get("paused_at") or game["deadline"] <= stamp() or pid == game["speaker"] or pid in game["frozen"] or game["buzzed"]):
         return
     game["buzzed"] = pid
     game["last_event"] = f"{room['players'][pid]['nickname']} buzzed in!"
@@ -420,7 +414,7 @@ def judge_answer(data):
         return
     game = room.get("party")
     if (not game or game["phase"] != "playing" or game.get("flagged_by")
-            or game["deadline"] <= stamp() or pid != game["speaker"] or not game["buzzed"]):
+            or game.get("paused_at") or game["deadline"] <= stamp() or pid != game["speaker"] or not game["buzzed"]):
         return
     if (data or {}).get("correct") is True:
         return finish_forbidden(code, "correct", game["buzzed"])
@@ -437,7 +431,7 @@ def flag_forbidden():
         return
     game = room.get("party")
     if (not game or game["phase"] != "playing" or game["deadline"] <= stamp()
-            or pid == game["speaker"] or game["flagged_by"]):
+            or game.get("paused_at") or pid == game["speaker"] or game["flagged_by"]):
         return
     game["flagged_by"] = pid
     game["flag_seconds_left"] = max(0, int(game["deadline"] - stamp()))
@@ -453,7 +447,7 @@ def resolve_flag(data):
     if not room or room.get("active_game") != "forbidden" or pid != room["host_id"]:
         return
     game = room.get("party")
-    if not game or game["phase"] != "playing" or not game["flagged_by"]:
+    if not game or game.get("paused_at") or game["phase"] != "playing" or not game["flagged_by"]:
         return
     if (data or {}).get("uphold") is True:
         finish_forbidden(code, "foul")
@@ -472,7 +466,7 @@ def skip_forbidden():
     if not room or room.get("active_game") != "forbidden":
         return
     game = room.get("party")
-    if game and game["phase"] == "playing" and not game.get("flagged_by") and pid in (room["host_id"], game["speaker"]):
+    if game and not game.get("paused_at") and game["phase"] == "playing" and not game.get("flagged_by") and pid in (room["host_id"], game["speaker"]):
         finish_forbidden(code, "skip")
 
 
@@ -482,7 +476,7 @@ def next_party_round():
     if not room or room.get("active_game") != "forbidden" or pid != room["host_id"]:
         return
     game = room.get("party")
-    if game and game["phase"] == "reveal":
+    if game and not game.get("paused_at") and game["phase"] == "reveal":
         next_forbidden_round(code)
 
 
@@ -493,8 +487,12 @@ def tick_rooms():
     for code, room in list(rooms.items()):
         transfer_host_if_needed(code)
         game = room.get("party")
-        if not game:
+        if not game or game.get("paused_at"):
             continue
+        if game.get("kind") == "clueless" and game.get("deadline") and game.get("phase") == "guess" and game["deadline"] <= now:
+            codenames_next_turn(game)
+            game["last_event"] = "Time's up! The other team takes over."
+            emit_party_state(code)
         if game.get("kind") == "forbidden":
             if game["phase"] == "playing" and game.get("flagged_by") and game.get("flag_review_end", now+1) <= now:
                 game["flagged_by"] = None
@@ -507,9 +505,20 @@ def tick_rooms():
                 finish_forbidden(code, "timeout")
             elif game["phase"] == "reveal" and game.get("deadline", now + 1) <= now:
                 next_forbidden_round(code)
-        elif game.get("kind") == "dots" and game["phase"] == "playing" and game["deadline"] <= now:
-            game["phase"] = "finished"
-            game["last_event"] = "Time's up!"
-            ranks = sorted(game["scores"], key=lambda p: -game["scores"][p])
-            game["winner"] = ranks[0] if ranks else None
-            emit_party_state(code)
+
+
+def set_party_pause(code, pause):
+    room = rooms.get(code)
+    game = room.get("party") if room else None
+    if not game or game["phase"] == "finished":
+        return
+    if pause and not game.get("paused_at"):
+        game["paused_at"] = stamp()
+        game["last_event"] = "Game paused by the host."
+    elif not pause and game.get("paused_at"):
+        delta = stamp() - game.pop("paused_at")
+        for key in ("deadline", "flag_review_end"):
+            if game.get(key) is not None:
+                game[key] += delta
+        game["last_event"] = "Game resumed."
+    emit_party_state(code)

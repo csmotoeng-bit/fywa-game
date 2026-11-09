@@ -2416,3 +2416,183 @@ body.fywa-body::before {content:"";position:fixed;inset:0;pointer-events:none;z-
 
 /* Always respect HTML hidden attributes, including on buttons and panels. */
 .fywa-body [hidden],.game-shell [hidden] {display:none!important}
+
+/* === FYWA V6 / Game-night polish === */
+:root {--fy-personal-accent:#ab63f4;--fy-ink:#f8f8fc;--fy-panel-new:#202026;--fy-border-new:#404047;--fy-focus:#c98bff}
+html[data-fywa-theme="dark"] {color-scheme:dark;--bg:#0b0b0f;--bg2:#15151b;--panel:#1c1c23;--panel2:#292831;--text:#f7f4fa;--muted:#c1bbca;--cream:#fcf8ff;--orange:#af72ff;--pink:#f45ba6;--purple:#a85dff;--cyan:#90ccff;--fy-lime:#df8aff;--fy-txt:#f8f6fc;--fy-dim:#c2bacb;--fy-line:#42404d;--fy-ink:#f8f6fc;--fy-panel-new:#202026;--fy-border-new:#404047;--fy-focus:#c98bff}
+html[data-fywa-theme="light"] {color-scheme:light;--bg:#f5f7fa;--bg2:#e7eef8;--panel:#fff;--panel2:#ebf1fa;--text:#162b43;--muted:#586c84;--cream:#fff;--orange:#155baa;--pink:#246fbd;--purple:#145aab;--cyan:#2b83d8;--fy-lime:#155dab;--fy-txt:#162b43;--fy-dim:#58718c;--fy-line:#cbd6e6;--fy-ink:#152e48;--fy-panel-new:#fff;--fy-border-new:#ced9e9;--fy-focus:#1362b2}
+html[data-fywa-theme] body {background:var(--bg);color:var(--text)}
+html[data-fywa-theme="dark"] body.fywa-body {background:radial-gradient(circle at 70% -15%,#772b8e30,transparent 43%),radial-gradient(circle at -15% 105%,#ed3b7830,transparent 40%),linear-gradient(145deg,#09090d,#17171e);}
+html[data-fywa-theme="light"] body.fywa-body {background:radial-gradient(circle at 90% -10%,#b8d6ff80,transparent 42%),linear-gradient(150deg,#fcfdff,#edf3fa);}
+html[data-fywa-theme] .fywa-room-head h1 span,html[data-fywa-theme] .fywa-hero h1 span {color:var(--fy-personal-accent)}
+html[data-fywa-theme] .fywa-primary {background:var(--fy-personal-accent);color:white;border-color:transparent;box-shadow:0 4px 16px color-mix(in srgb,var(--fy-personal-accent),transparent 78%)}
+html[data-fywa-theme] .fywa-primary:hover:not(:disabled) {background:color-mix(in srgb,var(--fy-personal-accent),white 12%)}
+html[data-fywa-theme] .fywa-panel,html[data-fywa-theme] .fywa-side-panel,html[data-fywa-theme] .fywa-team-panel,html[data-fywa-theme] .fywa-config,html[data-fywa-theme] .fywa-game-card,html[data-fywa-theme] .fywa-pick-card,html[data-fywa-theme] .fywa-secret-card,html[data-fywa-theme] .fywa-buzz-area,html[data-fywa-theme] .fywa-newsline {background:var(--fy-panel-new);border:1px solid var(--fy-border-new);color:var(--fy-ink);box-shadow:0 4px 18px #0000000c}
+html[data-fywa-theme] .fywa-panel h2,html[data-fywa-theme] .fywa-panel h3,html[data-fywa-theme] .fywa-side-panel h3,html[data-fywa-theme] .fywa-team-row,html[data-fywa-theme] .fywa-player strong,html[data-fywa-theme] .fywa-mode-title {color:var(--fy-ink)}
+html[data-fywa-theme] .fywa-config p,html[data-fywa-theme] .fywa-side-panel p,html[data-fywa-theme] .fywa-mode-copy p,html[data-fywa-theme] .fywa-mode-copy small,html[data-fywa-theme] .fywa-player small,html[data-fywa-theme] .fywa-muted,html[data-fywa-theme] .fywa-panel label {color:var(--fy-dim)!important}
+html[data-fywa-theme] .fywa-player,html[data-fywa-theme] .fywa-game-summary,html[data-fywa-theme] .fywa-mode-setting,html[data-fywa-theme] .fywa-clueless-hero {background:var(--fy-panel-new);border:1px solid var(--fy-border-new);color:var(--fy-ink)}
+html[data-fywa-theme] .fywa-pick-card.active {background:color-mix(in srgb,var(--fy-personal-accent),var(--fy-panel-new) 89%);border:2px solid var(--fy-personal-accent)!important}
+html[data-fywa-theme] .fywa-pick-card strong,html[data-fywa-theme] .fywa-picked,html[data-fywa-theme] .fywa-pick-kicker {color:var(--fy-ink)}
+html[data-fywa-theme] .fywa-outline,html[data-fywa-theme] .fywa-mini-btn,html[data-fywa-theme] .fywa-entry-tab {background:var(--panel2);border:1px solid var(--fy-border-new);color:var(--fy-ink)}
+html[data-fywa-theme] .fywa-entry-tab.active {background:color-mix(in srgb,var(--fy-personal-accent),transparent 84%);border-color:var(--fy-personal-accent);color:var(--fy-ink)}
+html[data-fywa-theme] .fywa-body input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]),html[data-fywa-theme] .fywa-body select {background:var(--bg2);border:1px solid var(--fy-border-new);color:var(--fy-ink)}
+html[data-fywa-theme] .fywa-word-card {background:var(--panel2);color:var(--fy-ink);border-color:var(--fy-border-new)}
+html[data-fywa-theme] .fywa-word-card.fywa-tile-blue {background:#3269bb;color:white;border-color:#6c9bed}
+html[data-fywa-theme] .fywa-word-card.fywa-tile-red {background:#b53f59;color:white;border-color:#ed8297}
+html[data-fywa-theme] .fywa-word-card.fywa-tile-neutral {background:#91838a;color:white;border-color:#c4aebc}
+html[data-fywa-theme] .fywa-word-card.fywa-tile-assassin {background:#14131a;color:white;border-color:#777587}
+html[data-fywa-theme] .fywa-word-card.fywa-revealed {opacity:.83}
+html[data-fywa-theme] .fywa-body .fywa-notice {background:var(--panel2);border-color:var(--fy-border-new);color:var(--fy-ink)}
+html[data-fywa-theme] .fywa-body .fywa-share strong {color:var(--fy-personal-accent)}
+html[data-fywa-theme] .fywa-body .fywa-overline {color:var(--fy-dim)}
+html[data-fywa-theme] .fywa-body .fywa-back {color:var(--fy-dim)}
+html[data-fywa-theme] .fywa-body .fywa-back:hover {color:var(--fy-ink)}
+html[data-fywa-theme] .fywa-body .fywa-game-summary h2 {color:var(--fy-ink)}
+html[data-fywa-theme] .fywa-body .fywa-newsline {color:var(--fy-ink)}
+html[data-fywa-theme] .fywa-body .fywa-toast {background:var(--fy-personal-accent);color:white}
+html[data-fywa-theme] .fywa-body button:focus-visible,html[data-fywa-theme] .game-shell button:focus-visible {outline:3px solid var(--fy-focus);outline-offset:2px}
+html[data-fywa-theme="light"] .game-shell .panel,html[data-fywa-theme="light"] .game-shell .play-panel,html[data-fywa-theme="light"] .game-shell .score-panel {background:#fff;border:1px solid #d0dbea;box-shadow:0 8px 22px #1a42621a;color:#162b43}
+html[data-fywa-theme="light"] .game-shell .panel h1,html[data-fywa-theme="light"] .game-shell .panel h2,html[data-fywa-theme="light"] .game-shell .play-panel h1 {color:#12375c}
+html[data-fywa-theme="light"] .game-shell .topic {background:#edf4fd;border:1px solid #c5daef;color:#164e88}
+html[data-fywa-theme="light"] .game-shell .waiting,html[data-fywa-theme="light"] .game-shell .answer-box,html[data-fywa-theme="light"] .game-shell .spectator-banner {background:#edf3fa;color:#173757;border-color:#c4d8ee}
+html[data-fywa-theme="light"] .game-shell .fyoa-nav a {color:#155baa}
+html[data-fywa-theme="light"] .game-shell .fyoa-nav button {background:#eaf2fb;color:#134e89;border-color:#bbd5f3}
+html[data-fywa-theme="light"] .game-shell button:not(.buzz) {box-shadow:none}
+html[data-fywa-theme="light"] .game-shell .score-row {color:#163754}
+
+/* Clueless: readable clue, shared selection, lock-in and elegant reveals. */
+.fywa-clueless-hero {display:grid;grid-template-columns:1fr minmax(0,2fr) 1fr;align-items:center;gap:clamp(5px,1vw,15px);padding:clamp(8px,1.4dvh,14px);border-radius:16px;flex:none;min-height:clamp(73px,13dvh,116px);overflow:hidden}
+.fywa-clueless-status {display:flex;flex-direction:column;align-items:start;gap:5px;font-size:clamp(9px,1vw,12px);font-weight:800;color:var(--fy-dim)}
+.fywa-turn-label {display:inline-block;border-radius:999px;background:#2057a630;padding:6px 9px;color:#95c4ff}
+.fywa-turn-red .fywa-turn-label {background:#d74d6430;color:#fa9aaf}
+.fywa-clueless-clue {display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-width:0;gap:2px}
+.fywa-clue-label {font-size:clamp(8px,.9vw,11px);letter-spacing:.13em;font-weight:850;color:var(--fy-dim)}
+.fywa-clueless-clue strong {display:block;width:100%;font-size:clamp(21px,min(4vw,4.2dvh),46px);font-weight:850;letter-spacing:-.045em;line-height:1.1;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;color:var(--fy-ink)}
+.fywa-clue-meta {font-size:clamp(9px,1.3vw,13px);font-weight:780;color:var(--fy-dim);letter-spacing:.012em}
+.fywa-clueless-right {display:flex;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
+.fywa-clueless-timer {font-size:clamp(13px,2vw,25px);font-weight:800;color:var(--fy-personal-accent)}
+.fywa-clueless-right .fywa-team-scores {gap:4px}
+.fywa-clueless-right .fywa-team-scores>div {font-size:clamp(8px,.8vw,10px);padding:5px 8px}
+.fywa-clueless-right .fywa-team-scores strong {font-size:clamp(14px,2vw,22px)}
+#party-game>.fywa-clueless-hero {margin:0}
+#party-game>.fywa-clueless-news {font-size:clamp(9px,1vw,11px)}
+.fywa-clueless-board-area {display:flex;flex-direction:column;min-height:0;gap:clamp(3px,.6dvh,7px);overflow:hidden}
+.fywa-clueless-board-area .fywa-words-board {flex:1;min-height:0;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr))}
+.fywa-word-card.fywa-selected {border:3px solid var(--fy-personal-accent)!important;outline:2px solid color-mix(in srgb,var(--fy-personal-accent),transparent 55%);outline-offset:-5px;background:color-mix(in srgb,var(--fy-personal-accent),var(--panel2) 80%)!important;color:var(--fy-ink)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--fy-personal-accent),transparent 50%),inset 0 0 0 1px #ffffff39!important;transform:scale(.97)}
+.fywa-word-card.fywa-just-revealed {animation:fywaFlip .55s ease-out}
+.fywa-clueless-controls {display:flex;align-items:center;gap:6px;min-height:clamp(31px,5dvh,50px);flex:none}
+.fywa-clueless-controls .fywa-button {padding:clamp(6px,1.1dvh,10px) clamp(8px,1vw,14px);font-size:clamp(9px,1.3vw,12px);white-space:nowrap;min-height:30px}
+.fywa-selection-caption {font-size:clamp(9px,1.2vw,12px);color:var(--fy-dim);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fywa-selection-caption b {color:var(--fy-personal-accent)}
+.fywa-lock-in {min-width:clamp(100px,15vw,180px);max-width:48%;overflow:hidden;text-overflow:ellipsis}
+.fywa-clueless-credits {margin:0;color:var(--fy-dim);font-size:clamp(8px,1.2vw,10px);white-space:nowrap;text-overflow:ellipsis;overflow:hidden;flex:none}
+.fywa-history {list-style:none;padding:0;margin:5px 0;display:grid;gap:4px}
+.fywa-history li {font-size:12px;padding:5px 3px;border-bottom:1px solid var(--fy-border-new);color:var(--fy-dim)}
+.fywa-history-blue {color:#77b7fa;font-weight:850}
+.fywa-history-red {color:#f47790;font-weight:850}
+.fywa-result-actions {display:flex;align-items:center;gap:7px;flex-wrap:wrap;flex:none}
+.fywa-result-actions .fywa-button {padding:7px 10px;font-size:11px}
+.fywa-result-actions p {font-size:11px;color:var(--fy-dim);margin:0}
+.fywa-game-pause {text-align:center;flex:none;background:#b75dff26;border:1px solid #b75dff79;border-radius:12px;padding:8px;color:var(--fy-ink);font-size:13px;font-weight:850;letter-spacing:.06em}
+.fywa-assassin-shock {animation:fywaShock .45s ease-in-out 2}
+@keyframes fywaFlip {0%{transform:rotateY(90deg);filter:brightness(1.7)}100%{transform:rotateY(0deg);filter:brightness(1)}}
+@keyframes fywaShock {50%{box-shadow:inset 0 0 0 80vmax rgba(233,20,63,.22)}}
+
+/* Local-only appearance preferences — does not occupy gameplay layout space. */
+.fywa-appearance-anchor {position:fixed;z-index:10000;bottom:calc(8px + env(safe-area-inset-bottom));right:calc(8px + env(safe-area-inset-right));pointer-events:none}
+.fywa-appearance-open {pointer-events:auto;background:var(--fy-panel-new);color:var(--fy-ink);border:1px solid var(--fy-border-new);border-radius:999px;padding:7px 10px;box-shadow:0 5px 16px #0003;font-size:11px;font-weight:800;letter-spacing:.01em;cursor:pointer}
+.fywa-appearance-shade {pointer-events:auto;position:fixed;inset:0;background:#05060bbf;display:grid;place-items:center;padding:15px;z-index:10001}
+.fywa-appearance-card {width:min(420px,100%);max-height:95dvh;overflow:auto;background:var(--fy-panel-new);color:var(--fy-ink);border:1px solid var(--fy-border-new);border-radius:22px;padding:22px;box-shadow:0 20px 80px #0008;display:flex;flex-direction:column;gap:9px}
+.fywa-appearance-head {display:flex;justify-content:space-between;align-items:center;gap:10px}
+.fywa-appearance-head h2 {font-size:24px;letter-spacing:-.05em;margin:0;color:var(--fy-ink)}
+.fywa-appearance-card p {font-size:12px;color:var(--fy-dim);line-height:1.5;margin:0 0 8px}
+.fywa-appearance-card label {font-size:12px;font-weight:750;color:var(--fy-ink)}
+.fywa-appearance-card input[type=range] {width:100%;margin:0}
+.fywa-theme-modes {display:flex;gap:5px}
+.fywa-theme-modes button {flex:1;background:var(--panel2);color:var(--fy-ink);border:1px solid var(--fy-border-new);border-radius:9px;padding:10px 4px;font-size:12px}
+.fywa-theme-modes button.selected {border:2px solid var(--fy-personal-accent);padding:9px 3px}
+.fywa-appearance-line {display:flex;align-items:center;gap:9px;color:var(--fy-dim);font-size:12px}
+.fywa-appearance-line input[type=color] {width:52px;height:36px;border:0;padding:0;background:transparent}
+.fywa-appearance-line input[type=checkbox] {width:19px;height:19px;margin:0;flex:none}
+.fywa-appearance-test,.fywa-appearance-close {border:1px solid var(--fy-border-new);background:var(--panel2);color:var(--fy-ink);font-size:12px;border-radius:9px;padding:10px;box-shadow:none}
+.fywa-appearance-close {width:37px;height:37px;padding:5px}
+@media(max-width:720px) {
+ .fywa-clueless-hero {grid-template-columns:.77fr 1.6fr .8fr;padding:6px;min-height:clamp(66px,12dvh,91px);gap:3px;border-radius:10px}
+ .fywa-clueless-status {font-size:8px;gap:3px}
+ .fywa-turn-label {font-size:8px;padding:4px}
+ .fywa-clueless-clue strong {font-size:clamp(15px,min(4.9vw,3.2dvh),27px);white-space:normal;overflow:hidden;max-height:2.2em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+ .fywa-clue-label,.fywa-clue-meta {font-size:8px}
+ .fywa-clueless-right {flex-direction:column;gap:1px}
+ .fywa-clueless-right .fywa-team-scores {flex-direction:row;gap:2px}
+ .fywa-clueless-right .fywa-team-scores>div {padding:2px;font-size:7px}
+ .fywa-clueless-right .fywa-team-scores strong {font-size:13px}
+ .fywa-clueless-timer {font-size:13px}
+ .fywa-clueless-controls {min-height:29px;gap:4px}
+ .fywa-clueless-controls .fywa-button {padding:5px 7px;font-size:9px}
+ .fywa-clueless-credits {display:none}
+ .fywa-lock-in {min-width:96px;max-width:43%}
+ .fywa-selection-caption {font-size:9px}
+ .fywa-appearance-open span {display:none}
+ .fywa-appearance-open {padding:6px 9px;font-size:13px;opacity:.85}
+ .fywa-result-actions .fywa-button {padding:5px 7px;font-size:9px}
+}
+@media(max-height:650px) { .fywa-clueless-hero {min-height:64px}.fywa-clueless-controls {min-height:26px}.fywa-clueless-credits {display:none} }
+@media(prefers-reduced-motion:reduce) { .fywa-word-card.fywa-just-revealed,.fywa-assassin-shock {animation:none!important} }
+.fywa-appearance-shade[hidden] {display:none!important}
+.fywa-custom-colour {display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}
+.fywa-custom-colour label {margin:0!important;font-size:11px}
+.fywa-custom-colour input[type=color] {border:0;background:transparent;width:39px;height:32px;padding:0}
+.fywa-custom-colour .fywa-button {padding:6px 10px;font-size:10px}
+.fywa-extra-controls {margin:7px 0}
+.fywa-host-details {border:1px solid var(--fy-border-new);border-radius:12px;background:var(--fy-panel-new);padding:10px;font-size:12px}
+.fywa-host-details summary {cursor:pointer;color:var(--fy-ink);font-weight:800}
+.fywa-host-actions {margin-top:12px;display:flex;flex-direction:column;gap:9px}
+.fywa-host-actions label {color:var(--fy-dim);font-size:11px}
+.fywa-host-actions button {font-size:11px;padding:8px}
+.fywa-host-actions input[type=checkbox] {width:17px;height:17px;margin:0}
+.fywa-checkline {display:flex;align-items:center;gap:7px}
+.fywa-inline-control {display:flex;align-items:center;gap:6px}
+.fywa-inline-control select {flex:1;min-width:0}
+.fywa-host-manage {display:grid;gap:4px;max-height:115px;overflow-y:auto}
+.fywa-host-manage>div {display:flex;align-items:center;gap:4px;justify-content:space-between;border-bottom:1px solid var(--fy-border-new);padding:4px 0}
+.fywa-host-manage>div span {flex:1;color:var(--fy-ink)}
+.fywa-share-tools {display:flex;gap:8px;margin-top:10px}
+.fywa-share-tools .fywa-button {padding:7px 10px;font-size:10px}
+.fywa-timer-setting {display:flex;align-items:center;gap:10px;margin-top:9px}
+.fywa-timer-setting label {margin:0!important}
+.fywa-timer-setting select {max-width:170px;margin:0!important}
+.fywa-tv-body {overflow:hidden}
+.fywa-tv-page {width:min(1400px,97vw);margin:0 auto;height:100dvh;display:flex;flex-direction:column;gap:clamp(6px,1dvh,14px);padding:clamp(12px,2dvh,22px) 0;overflow:hidden}
+.fywa-tv-page header {display:flex;justify-content:space-between;align-items:center;flex:none;color:var(--fy-ink);gap:10px}
+.fywa-tv-page header h1 {font-size:clamp(22px,4vw,45px);letter-spacing:-.05em;margin:2px 0}
+.fywa-tv-page header>div:last-child {display:flex;flex-direction:column;align-items:end;color:var(--fy-ink)}
+.fywa-tv-page header strong {color:var(--fy-personal-accent);font-size:clamp(24px,4vw,45px);letter-spacing:.12em}
+.fywa-tv-kicker,.fywa-tv-page header small,.fywa-tv-page footer {font-size:11px;color:var(--fy-dim);font-weight:800;letter-spacing:.12em}
+.fywa-tv-page footer {flex:none;text-align:center}
+#tv-content {flex:1;min-height:0;display:flex;flex-direction:column;gap:clamp(8px,1.5dvh,18px);overflow:hidden}
+.fywa-tv-current {flex:none;display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--fy-panel-new);border:1px solid var(--fy-border-new);border-radius:18px;padding:clamp(8px,2dvh,18px)}
+.fywa-tv-current span,.fywa-tv-current small {color:var(--fy-dim);font-weight:800;letter-spacing:.1em}
+.fywa-tv-current strong {color:var(--fy-ink);font-size:clamp(24px,min(6vw,6dvh),68px);letter-spacing:-.05em}
+.fywa-tv-board {flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr));gap:clamp(3px,1vw,13px)}
+.fywa-tv-tile {background:var(--panel2);color:var(--fy-ink);border:1px solid var(--fy-border-new);display:grid;place-items:center;text-align:center;border-radius:13px;padding:3px;min-width:0;min-height:0;font-size:clamp(9px,min(2vw,2.7dvh),22px);font-weight:850;overflow-wrap:anywhere}
+.fywa-tv-tile.fywa-tile-blue {background:#3269bb;color:white}
+.fywa-tv-tile.fywa-tile-red {background:#b53f59;color:white}
+.fywa-tv-tile.fywa-tile-neutral {background:#91838a;color:white}
+.fywa-tv-tile.fywa-tile-assassin {background:#16141d;color:white}
+.fywa-tv-scores {display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;max-height:65dvh;overflow:auto}
+.fywa-tv-scores>div {padding:16px;background:var(--fy-panel-new);border:1px solid var(--fy-border-new);border-radius:12px;display:flex;justify-content:space-between;color:var(--fy-ink)}
+.fywa-tv-wait {margin:auto;text-align:center;color:var(--fy-ink)}
+.fywa-tv-player {display:inline-flex;align-items:center;gap:7px;margin:7px;padding:11px;border:1px solid var(--fy-border-new);border-radius:12px;background:var(--fy-panel-new)}
+.fywa-tv-player i {height:12px;width:12px;border-radius:50%;display:inline-block}
+/* Light-theme legibility fixes: readable titles and Ford-blue defaults. */
+html[data-fywa-theme="light"] .fywa-body h1,html[data-fywa-theme="light"] .fywa-body h2,html[data-fywa-theme="light"] .fywa-body h3,html[data-fywa-theme="light"] .fywa-body .fywa-section-heading,html[data-fywa-theme="light"] .fywa-body .fywa-game-short,html[data-fywa-theme="light"] .fywa-body .fywa-eyebrow {color:#14385c}
+html[data-fywa-theme="light"] .fywa-body .fywa-game-head h1,html[data-fywa-theme="light"] .fywa-body .fywa-room-head h1 {color:#153a64!important}
+html[data-fywa-theme="light"] .fywa-turn-label {background:#dce9f7;color:#155ba5}
+html[data-fywa-theme="light"] .fywa-turn-red .fywa-turn-label {background:#fde8ed;color:#a23c54}
+html[data-fywa-theme="light"] .fywa-clueless-status {color:#40627f}
+html[data-fywa-theme="light"] .fywa-body .fywa-mode-status {color:#155dab}
+html[data-fywa-theme="light"] .fywa-body .fywa-mode-setting.is-extreme {background:#e6f0fb}
+html[data-fywa-theme="light"] .fywa-body .fywa-mode-setting.is-extreme .fywa-age-chip {color:#a13c45;background:#ffe5ec;border-color:#ef9fb0}
+html[data-fywa-theme="light"] .fywa-body .fywa-team-panel h4 {color:#153a64}
+html[data-fywa-theme="light"] .fywa-body .fywa-player .fywa-me {color:#155dab;background:#e6f0fb}
+html[data-fywa-theme] #party-panel-toggle {min-height:0;width:max-content;align-self:flex-end;background:var(--panel2);color:var(--fy-ink);border:1px solid var(--fy-border-new);font-size:10px;padding:6px 12px;border-radius:10px}
